@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>密室逃脫謎題檢索</title>
+<style>
+  :root {
+    --bg: #faf7f2;
+    --surface: #ffffff;
+    --border: #e8d5bc;
+    --text: #2d1a09;
+    --text-dim: #8a6645;
+    --accent: #b45309;
+    --accent-light: #d97706;
+    --tag-text: #92400e;
+    --tag-bg: rgba(180,83,9,.11);
+    --green: #047857;
+    --green-bg: rgba(4,120,87,.1);
+    --amber: #92400e;
+    --amber-bg: rgba(146,64,14,.1);
+    --rose: #9f1239;
+    --rose-bg: rgba(159,18,57,.1);
+    --cyan: #0e7490;
+    --cyan-bg: rgba(14,116,144,.1);
+    --blue: #1e40af;
+    --blue-bg: rgba(30,64,175,.1);
+    --orange: #c2410c;
+    --orange-bg: rgba(194,65,12,.1);
+    --teal: #0f766e;
+    --teal-bg: rgba(15,118,110,.1);
+    --purple: #7c3aed;
+    --purple-bg: rgba(124,58,237,.1);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #6b2d0a 0%, #b45309 45%, #d97706 75%, #b45309 100%);
+    border-bottom: 2px solid #92400e;
+    padding: 2.5rem 1.5rem 2rem;
+    text-align: center;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: #fef3c7;
+    text-shadow: 0 1px 4px rgba(0,0,0,.35);
+    margin-bottom: .45rem;
+  }
+  .header p { color: #fde68a; font-size: .95rem; letter-spacing: .02em; }
+
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    margin-top: 1.2rem;
+  }
+  .stat-chip {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 99px;
+    padding: .3rem .9rem;
+    font-size: .82rem;
+    color: #fef3c7;
+  }
+  .stat-chip strong { color: #fff; font-size: 1rem; font-weight: 700; }
+
+  /* ── Layout ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+
+  /* ── Controls ── */
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    padding: 1rem 0 .8rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+  .search-box {
+    position: relative;
+    margin-bottom: .9rem;
+  }
+  .search-box svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    width: 18px; height: 18px;
+  }
+  .search-box input {
+    width: 100%;
+    padding: .75rem 1rem .75rem 2.8rem;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    box-shadow: 0 1px 4px rgba(180,83,9,.06);
+  }
+  .search-box input::placeholder { color: var(--text-dim); }
+  .search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(180,83,9,.12);
+  }
+
+  .filter-row {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-label {
+    font-size: .78rem;
+    color: var(--text-dim);
+    margin-right: .1rem;
+    white-space: nowrap;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .filter-btn {
+    padding: .3rem .75rem;
+    border-radius: 99px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: .78rem;
+    cursor: pointer;
+    transition: all .18s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--accent-light); color: var(--accent); }
+  .filter-btn.active {
+    background: var(--tag-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .filter-divider {
+    width: 1px; height: 20px;
+    background: var(--border);
+    margin: 0 .2rem;
+  }
+
+  /* ── Result info ── */
+  .result-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: .84rem;
+    color: var(--text-dim);
+  }
+  .result-info strong { color: var(--accent); }
+
+  /* ── Cards ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 1rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 1.15rem 1.25rem;
+    transition: border-color .22s, transform .22s, box-shadow .22s;
+    display: flex;
+    flex-direction: column;
+    gap: .65rem;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    opacity: 0;
+    transition: opacity .22s;
+  }
+  .card:hover {
+    border-color: var(--accent-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(180,83,9,.12);
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-no-link { cursor: default; }
+  .card-no-link:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(180,83,9,.06);
+    border-color: var(--border);
+  }
+  .card-no-link:hover::before { opacity: 0; }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: .5rem;
+  }
+  .card-title {
+    font-size: 1.08rem;
+    font-weight: 700;
+    line-height: 1.3;
+    flex: 1;
+    color: var(--text);
+  }
+  .open-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .25rem .6rem;
+    border-radius: 7px;
+    background: var(--accent);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity .2s;
+    pointer-events: none;
+  }
+  .card:hover .open-badge { opacity: 1; }
+  .open-badge svg { width: 11px; height: 11px; }
+
+  .card-desc {
+    font-size: .86rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-top: auto;
+    padding-top: .1rem;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .18rem .55rem;
+    border-radius: 6px;
+    font-size: .7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tag-cat    { background: var(--tag-bg);    color: var(--tag-text); }
+  .tag-act-106{ background: var(--green-bg);  color: var(--green); }
+  .tag-act-108{ background: var(--amber-bg);  color: var(--amber); }
+  .tag-act-112{ background: var(--cyan-bg);   color: var(--cyan); }
+  .tag-act-113{ background: var(--teal-bg);   color: var(--teal); }
+  .tag-act-alc{ background: var(--rose-bg);   color: var(--rose); }
+  .tag-act-joy{ background: var(--purple-bg); color: var(--purple); }
+  .tag-room   { background: var(--blue-bg);   color: var(--blue); }
+  .tag-answer { background: var(--orange-bg); color: var(--orange); }
+
+  .no-result {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--text-dim);
+  }
+  .no-result .big { font-size: 3rem; margin-bottom: .5rem; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.5rem; }
+    .cards { grid-template-columns: 1fr; }
+    .stats-bar { gap: .7rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔐 密室逃脫謎題檢索</h1>
+  <p>橫跨六場活動的完整謎題庫，快速查找、分類瀏覽</p>
+  <div class="stats-bar">
+    <div class="stat-chip"><strong id="totalCount">0</strong>&nbsp;道謎題</div>
+    <div class="stat-chip"><strong>7</strong>&nbsp;場活動</div>
+    <div class="stat-chip"><strong>7</strong>&nbsp;種類型</div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="controls">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="搜尋謎題名稱、說明、答案、場景…">
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">類型</span>
+      <button class="filter-btn active" data-filter="cat" data-value="all">全部</button>
+      <button class="filter-btn" data-filter="cat" data-value="文字語文">🔤 文字語文</button>
+      <button class="filter-btn" data-filter="cat" data-value="密碼解碼">🔢 密碼解碼</button>
+      <button class="filter-btn" data-filter="cat" data-value="邏輯推理">🧩 邏輯推理</button>
+      <button class="filter-btn" data-filter="cat" data-value="數學計算">➕ 數學計算</button>
+      <button class="filter-btn" data-filter="cat" data-value="視覺空間">👁️ 視覺空間</button>
+      <button class="filter-btn" data-filter="cat" data-value="聽覺感知">🎧 聽覺感知</button>
+      <button class="filter-btn" data-filter="cat" data-value="實體機關">⚙️ 實體機關</button>
+      <div class="filter-divider"></div>
+      <span class="filter-label">活動</span>
+      <button class="filter-btn active" data-filter="act" data-value="all">全部</button>
+      <button class="filter-btn" data-filter="act" data-value="106">106年</button>
+      <button class="filter-btn" data-filter="act" data-value="108">108年</button>
+      <button class="filter-btn" data-filter="act" data-value="112">112年</button>
+      <button class="filter-btn" data-filter="act" data-value="113">113年 精靈王國</button>
+      <button class="filter-btn" data-filter="act" data-value="嘉年華">嘉年華（110年）</button>
+      <button class="filter-btn" data-filter="act" data-value="煉金城市">煉金城市</button>
+    </div>
+  </div>
+
+  <div class="result-info">
+    <span>顯示 <strong id="visibleCount">0</strong> / <strong id="totalCount2">0</strong> 題</span>
+    <span id="filterDesc" style="font-size:.8rem;">點選卡片可開啟謎題檔案</span>
+  </div>
+
+  <div class="cards" id="cardsContainer"></div>
+</div>
+
+<script>
+const puzzles = [
+  // ── 106 / 107年 ──────────────────────────────────────────
+  { name:"填字謎題", cat:"文字語文", act:"106", room:"", desc:"英文字母方格中找出隱藏單字（Word Search），通關地點藏有大量謎底。", answer:"", link:"./pdf/106_填字謎題.pdf" },
+  { name:"藏頭詩", cat:"文字語文", act:"106", room:"", desc:"從詩句或文章中取每行首字，組合成答案線索。", answer:"", link:"./pdf/106_藏頭.pdf" },
+  { name:"中文字方格密碼", cat:"文字語文", act:"106", room:"", desc:"9×7 中文字方格，在看似無意義的字陣中找出隱藏的關鍵詞彙。", answer:"", link:"./pdf/106_謎題-全.pdf#page=7" },
+  { name:"迷宮", cat:"視覺空間", act:"106", room:"", desc:"找出迷宮的正確通路，沿途或終點取得對應線索。", answer:"", link:"./pdf/106_謎題-全.pdf#page=3" },
+  { name:"神秘的圖騰", cat:"視覺空間", act:"106", room:"", desc:"觀察圖騰圖形中的隱藏規律，推算出密碼。", answer:"", link:"./pdf/106_謎題-全.pdf#page=2" },
+  { name:"奇怪的馬路", cat:"視覺空間", act:"106", room:"", desc:"觀察不尋常的街道圖，從中找出隱藏的線索。", answer:"", link:"./pdf/106_謎題-全.pdf#page=5" },
+  { name:"鞋底暗號", cat:"密碼解碼", act:"106", room:"", desc:"鞋底花紋圖案中隱藏暗號，需轉換角度觀察。", answer:"", link:"./pdf/106_謎題-全.pdf#page=4" },
+  { name:"謎題-全（數字矩陣）", cat:"密碼解碼", act:"106", room:"", desc:"大量數字構成的矩陣，找出排列規律以解碼。", answer:"", link:"./pdf/106_謎題-全.pdf#page=1" },
+  { name:"AD轉角（坐標代碼）", cat:"密碼解碼", act:"106", room:"", desc:"依照坐標（英文字母＋數字）轉換，對應密碼表取得密碼。", answer:"GC", link:"./pdf/106_AD轉角.pdf" },
+  { name:"Pic Logic（圖畫謎）", cat:"邏輯推理", act:"106", room:"", desc:"Nonogram 邏輯謎，依格數提示填色還原圖案。", answer:"", link:"./106 密室逃脫/密室逃脫/puzzle/Pic Logic.xlsx" },
+
+  // ── 108年 ─────────────────────────────────────────────────
+  { name:"藏書密碼", cat:"文字語文", act:"108", room:"", desc:"利用書中文字或成語推算密碼，兩句成語隱含線索。", answer:"", link:"./pdf/108_謎題.pdf#page=1" },
+  { name:"成語密碼", cat:"文字語文", act:"108", room:"", desc:"以成語詩句對應數字編碼（47, 747, 563, 495），從詩義中解讀密碼。", answer:"", link:"./pdf/108_謎題.pdf#page=4" },
+  { name:"爺爺的計算機", cat:"密碼解碼", act:"108", room:"", desc:"計算機螢幕上的數字，倒置後對應英文字母取得四位字母密碼。", answer:"", link:"./pdf/108_謎題.pdf#page=1" },
+  { name:"奇妙的數學式", cat:"數學計算", act:"108", room:"", desc:"英文單字當數字（FORTY + TEN + TEN = SIXTY），推算 FIFTY = ?????。", answer:"", link:"./pdf/108_謎題.pdf#page=2" },
+  { name:"○的秘密", cat:"數學計算", act:"108", room:"", desc:"以○圖形隱藏數字或規律，需觀察圖形與數字的對應關係。", answer:"", link:"./pdf/108_謎題.pdf#page=2" },
+  { name:"誰是說謊者？", cat:"邏輯推理", act:"108", room:"", desc:"5位嫌疑人各自陳述，已知一人是小偷且一人說謊，推理找出說謊者。", answer:"", link:"./pdf/108_謎題.pdf#page=3" },
+  { name:"星象密碼", cat:"視覺空間", act:"108", room:"", desc:"以 GeoGebra 製作的星座／天文幾何謎題，結合星象圖與密碼表。", answer:"", link:"./108 密室逃脫/星象密碼.ggb" },
+
+  // ── 112年 開場 ────────────────────────────────────────────
+  { name:"開場謎題方案一", cat:"密碼解碼", act:"112", room:"開場", desc:"鍵盤F/J鍵有凸起可觸覺辨識，以盲打方式解讀密碼。", answer:"", link:"https://docs.google.com/document/d/1SoSjAkVivGwRKhDaCxDpeblfM7F9_7Vn9ZMrzpmnOPg/edit" },
+  { name:"開場謎題方案二", cat:"數學計算", act:"112", room:"開場", desc:"代入 R=5, Y=1, B=3 計算三道算式，取得三位密碼。", answer:"", link:"https://docs.google.com/document/d/1-k6-3JoKlmEbEnh4eQdBfydP0ysPGlV4xE-s3zhIyP4/edit" },
+  { name:"這個好難", cat:"數學計算", act:"112", room:"開場", desc:"Monday=617, Tuesday=729, Wednesday=9312…，找出星期英文與數字的對應規律，求 Sunday=????", answer:"", link:"https://docs.google.com/document/d/1YVTZEbkkUVNKHzo1-RkNsvJqnqsOhArj1pX1QAFH9ZQ/edit" },
+  { name:"XYZa（密碼算術）", cat:"數學計算", act:"112", room:"開場", desc:"XYZ + YZα = XαXZ，每個字母代表0~9中不同的整數，求各字母的值。", answer:"", link:"https://docs.google.com/document/d/1VUZTcfd09Ns4ciaf4lYCrV8DmxYKMkdiIGvXTb1ueJY/edit" },
+
+  // ── 112年 學校房-鼎硯 ────────────────────────────────────
+  { name:"ABC~", cat:"數學計算", act:"112", room:"學校房-鼎硯", desc:"已知 A=3, B=4, C=0，找出字母與數字的對應規則，求 D+E+F=?", answer:"7", link:"https://docs.google.com/document/d/1YW-e3yV2Pcn98bOA6ecRE82el_d6tupuM6iHnjzk3-8/edit" },
+  { name:":>（奇怪的加法）", cat:"數學計算", act:"112", room:"學校房-鼎硯", desc:"19+80=4, 24+79=1, 81+41=2…，找出隱藏的運算規律，求 26+89=?", answer:"4", link:"https://docs.google.com/document/d/1YzwrW3LqRv4QoRodJNk1P8cCp_OwkOT7Pgc1awmdNVY/edit" },
+  { name:"半糖去冰", cat:"數學計算", act:"112", room:"學校房-鼎硯", desc:"積木城堡每往上一層少用一塊，52塊剛好用完最高有幾層？（等差數列應用）", answer:"8", link:"https://docs.google.com/document/d/1s9lgMgzWUn1h7PfPzsT8gqXAEVvwVKqZYEP-ALasX6Q/edit" },
+  { name:"有意思（中文字算術）", cat:"數學計算", act:"112", room:"學校房-鼎硯", desc:"同一國字代表同一數字，不同國字代表不同數字，推算加法等式。", answer:"", link:"https://docs.google.com/document/d/1RdyJai1WNVbhVAIhi7KXAQ8ru-a8hLA2ebvPDHjojpI/edit" },
+  { name:"天空之城 二進位改", cat:"密碼解碼", act:"112", room:"學校房-鼎硯", desc:"黑=1、白=0，依二進位轉換成數字後對應《天空之城》樂譜第一行旋律。", answer:"天空之城", link:"https://docs.google.com/document/d/1HLYj1-v5VYZJ1Lz7n4n4ClvoVP2lHjyAPwBuKksvBpA/edit" },
+  { name:"場佈（5題圖片謎）", cat:"視覺空間", act:"112", room:"學校房-鼎硯", desc:"5題以圖片呈現的綜合謎題，需觀察圖片中的視覺線索。", answer:"", link:"https://docs.google.com/document/d/15-7ThP3GiS1Tlpurfv49B231HwXrnU0EDeLHDAl_lI4/edit" },
+
+  // ── 112年 朋友房-翔禹 ────────────────────────────────────
+  { name:"蛤", cat:"邏輯推理", act:"112", room:"朋友房-翔禹", desc:"5×5方格中有四條行走路線，每條路線的形狀對應一個筆畫，拼出一個中文字。", answer:"", link:"https://docs.google.com/document/d/1S03RthBOATE8rabsYhZn6sAh-0UDhGl3KZATv5-7WMw/edit" },
+  { name:"數學金字塔", cat:"數學計算", act:"112", room:"朋友房-翔禹", desc:"三角形數字填格謎題，發現上下層數字之間的運算規律，找出X的值。", answer:"06", link:"https://docs.google.com/document/d/1izpezo8nslY6Aqv6VrFuwTOLaUQiW-1kMXj2pHRpyO0/edit" },
+  { name:"加加減減是怎樣喇", cat:"數學計算", act:"112", room:"朋友房-翔禹", desc:"18+14=432, 7+2=59…等看似錯誤的等式，找出隱藏的規律求Y的值。", answer:"04", link:"https://docs.google.com/document/d/1ExuNiabygd1mj9Cv_SGqhJhghxerbdWeN_G9MPBKDSc/edit" },
+  { name:"ChatGPT（改）", cat:"文字語文", act:"112", room:"朋友房-翔禹", desc:"注音符號拆解後對應鍵盤上的英文字母，再重組成有意義的詞語。", answer:"在抽屜", link:"https://docs.google.com/document/d/1ZQM_EiPKqxrevvun1lDb_WQf1REzFGL9J6w3t8HTVHs/edit" },
+  { name:"我的涼麵25塊ㄟ", cat:"視覺空間", act:"112", room:"朋友房-翔禹", desc:"方格街道路徑謎題：向右+2元、向左-2元、向下×2、向上÷2，走過不能再走，求特定金額的路徑。", answer:"", link:"https://docs.google.com/document/d/1IqBIxM1dYrrGFoIvzIRJ9IQM80OmuvY27XMakyCmMgc/edit" },
+  { name:"QR圖片", cat:"視覺空間", act:"112", room:"朋友房-翔禹", desc:"4題以QR碼圖片呈現的謎題，掃描後取得各關線索。", answer:"", link:"https://docs.google.com/document/d/1sZjqENsxaWhl5695Ju5RKDh31luoqyD9IRrwKZGmMwQ/edit" },
+
+  // ── 112年 家人房-宜庭 ────────────────────────────────────
+  { name:"一天有24小時", cat:"數學計算", act:"112", room:"家人房-宜庭", desc:"計算結果需轉換成12小時制閱讀，例如 3×7=21 → 晚上9點 → 答案為9。", answer:"9", link:"https://docs.google.com/document/d/10SGVWpu8Rr8GawubyjuOw-a-fiP5w5lUVUShz5s10_w/edit" },
+  { name:"翻轉吧方向", cat:"視覺空間", act:"112", room:"家人房-宜庭", desc:"方向翻轉的視覺謎題，需從不同角度觀察或鏡像翻轉來解讀。", answer:"", link:"https://docs.google.com/document/d/160axZ9KqFD0OKJ46CBl4r93osrjqtAxUdWvtS_bfohE/edit" },
+  { name:"我和他們的關係", cat:"邏輯推理", act:"112", room:"家人房-宜庭", desc:"從家族稱謂推導三人的長幼順序與性別，再代入公式計算數值。", answer:"2", link:"https://docs.google.com/document/d/15eLwUJ-S-1zD9M59dNiY1nYbnlMSo8gOQ7F7eCv_xog/edit" },
+  { name:"碎紙堆裡的秘密", cat:"文字語文", act:"112", room:"家人房-宜庭", desc:"ASCII碼搭配進位制（七進位→十六進位）轉換，最後得出英文密語。", answer:"behind the clock", link:"https://docs.google.com/document/d/12HlT-AAKUm1Q0ivk8RSD0qBF3OWS5f1y-4_eSu4mXEo/edit" },
+  { name:"說謊問題", cat:"邏輯推理", act:"112", room:"家人房-宜庭", desc:"三個人互相指控對方的糖果數量，判斷誰說了謊、誰最誠實。", answer:"C最誠實", link:"https://docs.google.com/document/d/10ThMtDCUuf8f--Eno-7MFBpOQe6UBMl6U-G-abctjNs/edit" },
+  { name:"英文16宮格", cat:"密碼解碼", act:"112", room:"家人房-宜庭", desc:"4×4英文字母方格，找出行列或對角線的排列規律，求缺少的字母。", answer:"e", link:"https://docs.google.com/document/d/1259SUL4Z_kOAJ-goBu29CojpIDE1sq3J8or2Zhk401Q/edit" },
+
+  // ── 113年 精靈王國大冒險 ──────────────────────────────────
+  { name:"數字謎題", cat:"密碼解碼", act:"113", room:"古代遺跡", desc:"考古學家在遺跡中發現神秘古代密碼，以序數（2nd / 3rd / 4th / 6th）對應英文字母的位置解碼。", answer:"", link:"./pdf/113_數字謎題-附件.pdf" },
+  { name:"魔法菜單", cat:"文字語文", act:"113", room:"大樹食堂", desc:"魔法餐廳需要密令才能啟動廚具，密令就藏在15道菜的菜單裡，從菜名中找出隱藏規律取得密碼。", answer:"", link:"./pdf/113_大樹食堂菜單.pdf" },
+  { name:"大祭之時", cat:"邏輯推理", act:"113", room:"觀日台", desc:"精靈祭司面對碑銘傷腦筋，每年大祭日期以詩歌形式顯現在碑上，依晝長夜短的節氣規律推算，需在7天內集結。", answer:"", link:"./pdf/113_113謎題場佈.pdf" },
+  { name:"收穫季節", cat:"數學計算", act:"113", room:"綠葉農場", desc:"農地被怪風吹亂6天6夜（9點↔12點循環），在5×11數字矩陣中找出滿足三的倍數規律的田地，還原農地模樣。", answer:"", link:"./pdf/113_農地附件.pdf" },
+  { name:"尖刺魔咒", cat:"視覺空間", act:"113", room:"魔物森林", desc:"精靈戰士挑戰尖刺魔獸，弱點記載在古代羊皮卷圖形中，數各圖形的尖刺個數找出密碼規律。", answer:"", link:"./pdf/113_113謎題場佈.pdf" },
+
+  // ── 110年 密室逃脫嘉年華 ── 紅色房間 ────────────────────────
+  { name:"方塊尋寶", cat:"視覺空間", act:"嘉年華", room:"紅色房間", desc:"入場時給一塊方塊，依眼球指示（翻白眼=上下後方）找出其餘方塊，拼成3×3×3立方體後兌換密碼表。", answer:"", link:"./pdf/嘉年華_紅色房間.pdf#page=2" },
+  { name:"摩斯密碼", cat:"聽覺感知", act:"嘉年華", room:"紅色房間", desc:"聆聽背景循環播放的摩斯密碼音檔，解出6位數字密碼，開啟下一關。", answer:"", link:"./pdf/嘉年華_紅色房間.pdf#page=3" },
+  { name:"英文拼盤", cat:"文字語文", act:"嘉年華", room:"紅色房間", desc:"兩張英文字母拼盤互相對照，藍色標記處拼出「I love you」，取中文諧音密碼。", answer:"520", link:"./pdf/嘉年華_紅色房間.pdf#page=3" },
+  { name:"魔方燈光", cat:"視覺空間", act:"嘉年華", room:"紅色房間", desc:"抽屜取出魔術方塊，與燈光顏色對照，數出紅色面的數量作為密碼。", answer:"36", link:"./pdf/嘉年華_紅色房間.pdf#page=4" },
+  { name:"紙條藏數", cat:"文字語文", act:"嘉年華", room:"紅色房間", desc:"開箱取得紙條，閱讀文字找出藏在其中的三位數數字密碼，前往對應編號的桌子。", answer:"036", link:"./pdf/嘉年華_紅色房間.pdf#page=4" },
+
+  // ── 110年 密室逃脫嘉年華 ── 消失的密室（哈利波特） ──────────
+  { name:"方塊迷陣", cat:"視覺空間", act:"嘉年華", room:"消失的密室（哈利波特）", desc:"哈利波特掉入迷陣，在迷陣路線中找出4位密碼才能走出、繼續追捕伏地魔。", answer:"", link:"./pdf/嘉年華_消失的密室.pdf#page=2" },
+  { name:"二進位密碼字盤", cat:"密碼解碼", act:"嘉年華", room:"消失的密室（哈利波特）", desc:"將提示數字轉換為二進位，對應字盤格子圈出相應文字，解得通關密令。附件：二進位字盤.xlsx", answer:"", link:"./pdf/嘉年華_消失的密室.pdf#page=3" },
+  { name:"猜數字（六樣聖物）", cat:"邏輯推理", act:"嘉年華", room:"消失的密室（哈利波特）", desc:"以哈利波特六樣聖物為題材的猜數字遊戲（邏輯推理鎖定數字位置），密碼6348。", answer:"6348", link:"./pdf/嘉年華_消失的密室.pdf#page=4" },
+  { name:"座標棋盤", cat:"視覺空間", act:"嘉年華", room:"消失的密室（哈利波特）", desc:"妙麗的相片底下藏有座標棋盤謎題，依座標規則找出密碼完成最後關卡。", answer:"", link:"./pdf/嘉年華_消失的密室.pdf#page=5" },
+
+  // ── 110年 密室逃脫嘉年華 ── 有個人的失蹤案 ──────────────────
+  { name:"玻璃紙密碼", cat:"密碼解碼", act:"嘉年華", room:"有個人的失蹤案", desc:"用藍色玻璃紙讀取6位數字741025，再用紅色玻璃紙讀取896301，合成12位通關密碼開門進入密室。", answer:"741025896301", link:"./pdf/嘉年華__有個人_的失蹤案.pdf#page=2" },
+  { name:"出生年計算", cat:"數學計算", act:"嘉年華", room:"有個人的失蹤案", desc:"從三段敘述（921大地震差5年、45的平方最接近出生年、差值條件）聯立推算出生年份，計算今年幾歲。", answer:"27", link:"./pdf/嘉年華__有個人_的失蹤案.pdf#page=3" },
+  { name:"字母行列密碼", cat:"密碼解碼", act:"嘉年華", room:"有個人的失蹤案", desc:"「You are good」每個字母以鍵盤行列兩要素排列成編號，推算出被汙漬遮住的號碼。", answer:"27", link:"./pdf/嘉年華__有個人_的失蹤案.pdf#page=3" },
+  { name:"注音密碼", cat:"文字語文", act:"嘉年華", room:"有個人的失蹤案", desc:"注音符號依聲母韻母順序各自編號，將密碼數字還原為注音組成的詞語。", answer:"密碼是什麼", link:"./pdf/嘉年華__有個人_的失蹤案.pdf#page=4" },
+  { name:"三角計算", cat:"數學計算", act:"嘉年華", room:"有個人的失蹤案", desc:"三角形謎題，位置提示「減在左邊、乘在下方」，按指定順序先減再乘完成計算。", answer:"21", link:"./pdf/嘉年華__有個人_的失蹤案.pdf#page=4" },
+  { name:"時鐘英文解碼", cat:"密碼解碼", act:"嘉年華", room:"有個人的失蹤案", desc:"以英文字母規律解碼，在教室右後方的時鐘內找到通關密語。", answer:"behind the clock", link:"./pdf/嘉年華__有個人_的失蹤案.pdf#page=5" },
+
+  // ── 110年 密室逃脫嘉年華 ── 實欣莉的校園血案 ────────────────
+  { name:"英文字母計數", cat:"密碼解碼", act:"嘉年華", room:"實欣莉的校園血案", desc:"依英文數字字長規則（six=3字母、twelve=6字母），推導9和4的對應值，找到目標抽屜號碼。", answer:"94", link:"./pdf/嘉年華_實欣莉的校園血案.pdf#page=2" },
+  { name:"謎字盤", cat:"密碼解碼", act:"嘉年華", room:"實欣莉的校園血案", desc:"逆時針隔三個字取字，依序讀出：「相隔三輪月 左邊窗簾裡 注意看前面」，引導到下一線索。", answer:"", link:"./pdf/嘉年華_實欣莉的校園血案.pdf#page=2" },
+  { name:"窗簾鏡像", cat:"視覺空間", act:"嘉年華", room:"實欣莉的校園血案", desc:"窗簾上的謎題含有鏡像干擾，去除鏡像部分後讀出真正的密碼，開啟密碼鎖。", answer:"214", link:"./pdf/嘉年華_實欣莉的校園血案.pdf#page=3" },
+  { name:"諧音謎詩", cat:"邏輯推理", act:"嘉年華", room:"實欣莉的校園血案", desc:"關主朗讀四行謎詩，每行含兩個數字的中文諧音字，聆聽辨識後合成四位數密碼。", answer:"6934", link:"./pdf/嘉年華_實欣莉的校園血案.pdf#page=3" },
+  { name:"點名表注音", cat:"文字語文", act:"嘉年華", room:"實欣莉的校園血案", desc:"點名表中藍字為座號、紅字為對應姓名注音符號的第N個位置，逐一解碼拼出目標抽屜號碼。", answer:"12", link:"./pdf/嘉年華_實欣莉的校園血案.pdf#page=4" },
+
+  // ── 煉金城市 ──────────────────────────────────────────────
+  { name:"賽銩（第1關）", cat:"實體機關", act:"煉金城市", room:"", desc:"能源傳導實驗艙：依提示圖卡連接電線，撥動開關，按下旋鈕開箱取得元素。", answer:"", link:"./pdf/煉金城市_1-賽銩-說明1031.pdf" },
+  { name:"心律（第2關）", cat:"聽覺感知", act:"煉金城市", room:"", desc:"情緒聲波分析室：以人體作為導體接通電路，聆聽4段心律聲，對應心律圖排序後取得密碼。", answer:"0815", link:"./pdf/煉金城市_2-心律-說明1031.pdf" },
+  { name:"幽霧（第3關）", cat:"視覺空間", act:"煉金城市", room:"", desc:"隱痕迷霧迴廊：用紫外線手電筒照射海報找出隱藏座標（F5→J1→F9→A7→I7），依箭頭方向解開方向鎖。", answer:"左右下上左", link:"./pdf/煉金城市_3-幽霧-說明.pdf" },
+  { name:"零質（第4關）", cat:"邏輯推理", act:"煉金城市", room:"", desc:"重編記憶實驗室：8張句條與8個人生階段詞條（原初/探索/形象…）一一配對，找有黑點標記的由左至右排列取密碼。", answer:"3481", link:"./pdf/煉金城市_4-零質-說明.pdf" },
+  { name:"鏈光（第5關）", cat:"實體機關", act:"煉金城市", room:"", desc:"光訊鏈路塔：手機NFC感應取得4個色塊，對應九宮格原點連線形成4個數字。", answer:"3481", link:"./pdf/煉金城市_5-鏈光-說明.pdf" },
+  { name:"虛點（第9關）", cat:"邏輯推理", act:"煉金城市", room:"", desc:"奇點臨界艙：辨識「虛」與「實」訊號節點，以反邏輯（虛為實、實為虛）找出路徑，在觸控板上輸入。", answer:"", link:"./pdf/煉金城市_9-虛點-說明.pdf" },
+  { name:"界織（第10關）", cat:"實體機關", act:"煉金城市", room:"", desc:"結界陣列圖：對照海報圖案，按下圓心按鈕使節點順時針旋轉，直到所有指定節點全部變為綠色。", answer:"", link:"./pdf/煉金城市_10-界織-說明.pdf" },
+];
+
+// ── Meta maps ──────────────────────────────────────────────
+const catMeta = {
+  "文字語文": { icon:"🔤" },
+  "密碼解碼": { icon:"🔢" },
+  "邏輯推理": { icon:"🧩" },
+  "數學計算": { icon:"➕" },
+  "視覺空間": { icon:"👁️" },
+  "聽覺感知": { icon:"🎧" },
+  "實體機關": { icon:"⚙️" },
+};
+const actMeta = {
+  "106":    { label:"106年 親子密逃", css:"tag-act-106" },
+  "108":    { label:"108年 密逃",     css:"tag-act-108" },
+  "112":    { label:"112年 密逃",     css:"tag-act-112" },
+  "113":    { label:"113年 精靈王國", css:"tag-act-113" },
+  "嘉年華":  { label:"110年 嘉年華",   css:"tag-act-joy" },
+  "煉金城市":{ label:"煉金城市",       css:"tag-act-alc" },
+};
+
+// ── State ─────────────────────────────────────────────────
+let filterCat = "all", filterAct = "all", searchTerm = "";
+
+document.getElementById("totalCount").textContent  = puzzles.length;
+document.getElementById("totalCount2").textContent = puzzles.length;
+
+// ── Render ────────────────────────────────────────────────
+function renderCards() {
+  const container = document.getElementById("cardsContainer");
+  const filtered = puzzles.filter(p => {
+    if (filterCat !== "all" && p.cat !== filterCat) return false;
+    if (filterAct !== "all" && p.act !== filterAct) return false;
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      if (!(p.name + p.desc + p.answer + p.cat + p.room + p.act).toLowerCase().includes(s)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("visibleCount").textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="no-result"><div class="big">🔍</div><p>找不到符合條件的謎題，試試其他關鍵字？</p></div>';
+    return;
+  }
+
+  const linkIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+    <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+  </svg>`;
+
+  container.innerHTML = filtered.map(p => {
+    const cm   = catMeta[p.cat] || { icon:"❓" };
+    const am   = actMeta[p.act] || { label:p.act, css:"tag-act-106" };
+    const hasLink = !!p.link;
+
+    const cardAttr = hasLink
+      ? `class="card" role="button" tabindex="0" data-href="${p.link}"
+         onclick="window.open(this.dataset.href,'_blank')"
+         onkeydown="if(event.key==='Enter')window.open(this.dataset.href,'_blank')"`
+      : `class="card card-no-link"`;
+
+    const badge = hasLink
+      ? `<span class="open-badge">${linkIcon}開啟</span>`
+      : `<span class="open-badge" style="visibility:hidden">.</span>`;
+
+    const roomTag   = p.room   ? `<span class="tag tag-room">${p.room}</span>`           : "";
+    const answerTag = p.answer ? `<span class="tag tag-answer">答案：${p.answer}</span>` : "";
+
+    return `
+      <div ${cardAttr}>
+        <div class="card-top">
+          <div class="card-title">${p.name}</div>
+          ${badge}
+        </div>
+        <div class="card-desc">${p.desc}</div>
+        <div class="card-tags">
+          <span class="tag tag-cat">${cm.icon} ${p.cat}</span>
+          <span class="tag ${am.css}">${am.label}</span>
+          ${roomTag}${answerTag}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+// ── Filters ───────────────────────────────────────────────
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const { filter: type, value: val } = btn.dataset;
+    document.querySelectorAll(`.filter-btn[data-filter="${type}"]`).forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    if (type === "cat") filterCat = val;
+    if (type === "act") filterAct = val;
+    renderCards();
+  });
+});
+
+// ── Search ────────────────────────────────────────────────
+let debounce;
+document.getElementById("searchInput").addEventListener("input", e => {
+  clearTimeout(debounce);
+  debounce = setTimeout(() => { searchTerm = e.target.value.trim(); renderCards(); }, 180);
+});
+
+renderCards();
+</script>
+</body>
+</html>
