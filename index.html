@@ -291,6 +291,25 @@
     .cards { grid-template-columns: 1fr; }
     .stats-bar { gap: .7rem; }
   }
+
+  /* ── Like Button ── */
+  .like-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.15rem;
+    padding: 0;
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+  .like-btn:hover { transform: scale(1.15); }
+  .like-btn.liked { color: var(--rose); }
+  .filter-btn.fav-active {
+    background: var(--rose-bg);
+    border-color: var(--rose);
+    color: var(--rose);
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -323,6 +342,8 @@
       <button class="filter-btn" data-filter="cat" data-value="視覺空間">👁️ 視覺空間</button>
       <button class="filter-btn" data-filter="cat" data-value="聽覺感知">🎧 聽覺感知</button>
       <button class="filter-btn" data-filter="cat" data-value="實體機關">⚙️ 實體機關</button>
+      <div class="filter-divider"></div>
+      <button class="filter-btn" id="favFilterBtn">❤️ 我的最愛</button>
       <div class="filter-divider"></div>
       <span class="filter-label">活動</span>
       <button class="filter-btn active" data-filter="act" data-value="all">全部</button>
@@ -462,6 +483,8 @@ const actMeta = {
 
 // ── State ─────────────────────────────────────────────────
 let filterCat = "all", filterAct = "all", searchTerm = "";
+let likedPuzzles = JSON.parse(localStorage.getItem("likedPuzzles") || "[]");
+let filterFav = false;
 
 document.getElementById("totalCount").textContent  = puzzles.length;
 document.getElementById("totalCount2").textContent = puzzles.length;
@@ -470,6 +493,7 @@ document.getElementById("totalCount2").textContent = puzzles.length;
 function renderCards() {
   const container = document.getElementById("cardsContainer");
   const filtered = puzzles.filter(p => {
+    if (filterFav && !likedPuzzles.includes(p.name)) return false;
     if (filterCat !== "all" && p.cat !== filterCat) return false;
     if (filterAct !== "all" && p.act !== filterAct) return false;
     if (searchTerm) {
@@ -495,6 +519,8 @@ function renderCards() {
     const cm   = catMeta[p.cat] || { icon:"❓" };
     const am   = actMeta[p.act] || { label:p.act, css:"tag-act-106" };
     const hasLink = !!p.link;
+    const isLiked = likedPuzzles.includes(p.name);
+    const likeIcon = isLiked ? "❤️" : "🤍";
 
     const cardAttr = hasLink
       ? `class="card" role="button" tabindex="0" data-href="${p.link}"
@@ -513,6 +539,7 @@ function renderCards() {
       <div ${cardAttr}>
         <div class="card-top">
           <div class="card-title">${p.name}</div>
+          <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="window.toggleLike(event, '${p.name.replace(/'/g, "\\'")}')" aria-label="加入最愛">${likeIcon}</button>
           ${badge}
         </div>
         <div class="card-desc">${p.desc}</div>
@@ -535,6 +562,24 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
     if (type === "act") filterAct = val;
     renderCards();
   });
+});
+
+// ── Like / Favorites ───────────────────────────────────────
+window.toggleLike = function(event, name) {
+  event.stopPropagation();
+  if (likedPuzzles.includes(name)) {
+    likedPuzzles = likedPuzzles.filter(p => p !== name);
+  } else {
+    likedPuzzles.push(name);
+  }
+  localStorage.setItem("likedPuzzles", JSON.stringify(likedPuzzles));
+  renderCards();
+};
+
+document.getElementById("favFilterBtn").addEventListener("click", function() {
+  filterFav = !filterFav;
+  this.classList.toggle("fav-active", filterFav);
+  renderCards();
 });
 
 // ── Search ────────────────────────────────────────────────
