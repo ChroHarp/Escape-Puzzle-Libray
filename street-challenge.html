@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的涼麵25塊ㄟ - 街道驗證程式</title>
+    <style>
+        :root {
+            --bg: #faf7f2;
+            --surface: #ffffff;
+            --border: #e8d5bc;
+            --text: #2d1a09;
+            --text-dim: #8a6645;
+            --accent: #b45309;
+            --accent-light: #d97706;
+            --success: #047857;
+            --danger: #9f1239;
+            --grid-line: #ddd;
+            --path-color: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .header p {
+            color: var(--text-dim);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .game-info {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            background: var(--surface);
+            padding: 1rem 2rem;
+            border-radius: 16px;
+            border: 1.5px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .info-item {
+            text-align: center;
+        }
+        .info-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.2rem;
+        }
+        .info-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .info-value.target {
+            color: var(--success);
+        }
+
+        .rules-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            background: rgba(180, 83, 9, 0.05);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px dashed var(--border);
+        }
+        .rule {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .rule-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            touch-action: none; /* Prevent scrolling while dragging */
+        }
+
+        #gameGrid {
+            display: block;
+            cursor: crosshair;
+        }
+
+        .controls {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        .btn-reset {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            color: var(--text-dim);
+        }
+        .btn-reset:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--success);
+        }
+        .modal p {
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+        }
+
+        .label-node {
+            font-size: 12px;
+            fill: var(--text-dim);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🍜 我的涼麵25塊ㄟ</h1>
+    <p>穿越街道前往學校，計算過路費。走過的街道不能重複，目標是在抵達終點時，繳納剛好 -4 元的過路費。</p>
+</div>
+
+<div class="game-info">
+    <div class="info-item">
+        <div class="info-label">目前過路費</div>
+        <div id="currentToll" class="info-value">4</div>
+    </div>
+    <div class="info-item">
+        <div class="info-label">目標金額</div>
+        <div class="info-value target">-4</div>
+    </div>
+</div>
+
+<div class="rules-grid">
+    <div class="rule"><div class="rule-icon">→</div> 向右走：+2 元</div>
+    <div class="rule"><div class="rule-icon">←</div> 向左走：-2 元</div>
+    <div class="rule"><div class="rule-icon">↓</div> 向下走：×2 倍</div>
+    <div class="rule"><div class="rule-icon">↑</div> 向上走：÷2 倍</div>
+</div>
+
+<div class="canvas-container">
+    <svg id="gameGrid" width="400" height="400" viewBox="-40 -40 480 480">
+        <!-- Definitions -->
+        <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="var(--path-color)" />
+            </marker>
+        </defs>
+
+        <!-- Grid Lines (Streets) -->
+        <g id="streets"></g>
+        
+        <!-- Path -->
+        <polyline id="activePath" fill="none" stroke="var(--path-color)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        
+        <!-- Nodes -->
+        <g id="nodes"></g>
+
+        <!-- Start/End Markers -->
+        <text x="0" y="-15" text-anchor="middle" class="label-node" style="font-weight:bold; fill:var(--accent)">社區大門 (起點)</text>
+        <text x="400" y="425" text-anchor="middle" class="label-node" style="font-weight:bold; fill:var(--success)">學校 (終點)</text>
+    </svg>
+</div>
+
+<div class="controls">
+    <button class="btn-reset" onclick="resetGame()">重新開始</button>
+</div>
+
+<div id="successOverlay" class="overlay">
+    <div class="modal">
+        <h2>🎉 恭喜通關！</h2>
+        <p>你成功以剛好 -4 元的過路費抵達了學校！</p>
+        <button class="btn-primary" onclick="resetGame(); document.getElementById('successOverlay').style.display='none'">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    const gridSize = 4; // 4x4 cells, 5x5 nodes
+    const cellSize = 100;
+    const nodesGroup = document.getElementById('nodes');
+    const streetsGroup = document.getElementById('streets');
+    const pathPolyline = document.getElementById('activePath');
+    const tollDisplay = document.getElementById('currentToll');
+    const overlay = document.getElementById('successOverlay');
+
+    let path = [{x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}];
+    let currentToll = 4;
+    let isDragging = false;
+
+    // Initialize Grid
+    function init() {
+        // Draw Streets (Static thin lines)
+        for (let i = 0; i <= gridSize; i++) {
+            // Horizontal
+            const hLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            hLine.setAttribute("x1", 0);
+            hLine.setAttribute("y1", i * cellSize);
+            hLine.setAttribute("x2", gridSize * cellSize);
+            hLine.setAttribute("y2", i * cellSize);
+            hLine.setAttribute("stroke", "var(--grid-line)");
+            hLine.setAttribute("stroke-width", "2");
+            streetsGroup.appendChild(hLine);
+
+            // Vertical
+            const vLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            vLine.setAttribute("x1", i * cellSize);
+            vLine.setAttribute("y1", 0);
+            vLine.setAttribute("x2", i * cellSize);
+            vLine.setAttribute("y2", gridSize * cellSize);
+            vLine.setAttribute("stroke", "var(--grid-line)");
+            vLine.setAttribute("stroke-width", "2");
+            streetsGroup.appendChild(vLine);
+        }
+
+        // Draw Nodes
+        for (let y = 0; y <= gridSize; y++) {
+            for (let x = 0; x <= gridSize; x++) {
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", x * cellSize);
+                circle.setAttribute("cy", y * cellSize);
+                circle.setAttribute("r", 12);
+                circle.setAttribute("fill", "#fff");
+                circle.setAttribute("stroke", "var(--border)");
+                circle.setAttribute("stroke-width", "2");
+                circle.setAttribute("style", "cursor: pointer;");
+                
+                // Add events
+                circle.addEventListener('mousedown', (e) => startDrag(x, y));
+                circle.addEventListener('mouseenter', (e) => handleMouseEnter(x, y));
+                circle.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startDrag(x, y);
+                });
+                
+                nodesGroup.appendChild(circle);
+
+                // Start/End highlights
+                if (x === 0 && y === 0) circle.setAttribute("stroke", "var(--accent)");
+                if (x === gridSize && y === gridSize) circle.setAttribute("fill", "var(--success)");
+                if (x === 2 && y === 0) {
+                    circle.setAttribute("fill", "var(--accent)");
+                    circle.setAttribute("stroke", "var(--accent)");
+                }
+            }
+        }
+        
+        updatePathDisplay();
+    }
+
+    // Touch support for grid
+    document.getElementById('gameGrid').addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (element && element.tagName === 'circle') {
+            const x = Math.round(element.getAttribute('cx') / cellSize);
+            const y = Math.round(element.getAttribute('cy') / cellSize);
+            handleMouseEnter(x, y);
+        }
+    });
+
+    document.addEventListener('mouseup', () => isDragging = false);
+    document.addEventListener('touchend', () => isDragging = false);
+
+    function startDrag(x, y) {
+        // Must start at current path head or start node if path is empty
+        const last = path[path.length - 1];
+        if (x === last.x && y === last.y) {
+            isDragging = true;
+        }
+    }
+
+    function handleMouseEnter(x, y) {
+        if (!isDragging) return;
+
+        const last = path[path.length - 1];
+        
+        // Only allow adjacent moves (No diagonals)
+        const dx = x - last.x;
+        const dy = y - last.y;
+        
+        if (Math.abs(dx) + Math.abs(dy) !== 1) return;
+
+        // Check if edge is already used
+        if (isEdgeUsed(last.x, last.y, x, y)) {
+            // If dragging back to previous node, remove the last segment
+            if (path.length > 1) {
+                const secondLast = path[path.length - 2];
+                if (x === secondLast.x && y === secondLast.y) {
+                    undoLastMove();
+                    return;
+                }
+            }
+            return;
+        }
+
+        // Add to path
+        path.push({x, y});
+        calculateToll(last, {x, y});
+        updatePathDisplay();
+        checkWin(x, y);
+    }
+
+    function isEdgeUsed(x1, y1, x2, y2) {
+        for (let i = 0; i < path.length - 1; i++) {
+            const p1 = path[i];
+            const p2 = path[i+1];
+            if ((p1.x === x1 && p1.y === y1 && p2.x === x2 && p2.y === y2) ||
+                (p1.x === x2 && p1.y === y2 && p2.x === x1 && p2.y === y1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function calculateToll(from, to) {
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+
+        if (dx === 1) currentToll += 2;      // Right
+        else if (dx === -1) currentToll -= 2; // Left
+        else if (dy === 1) currentToll *= 2;  // Down
+        else if (dy === -1) currentToll /= 2; // Up
+        
+        // Toll should be displayed clearly
+        tollDisplay.textContent = Number.isInteger(currentToll) ? currentToll : currentToll.toFixed(1);
+    }
+
+    function undoLastMove() {
+        if (path.length <= 1) return;
+        
+        const to = path.pop();
+        const from = path[path.length - 1];
+        
+        // Reverse calculation
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+
+        if (dx === 1) currentToll -= 2;
+        else if (dx === -1) currentToll += 2;
+        else if (dy === 1) currentToll /= 2;
+        else if (dy === -1) currentToll *= 2;
+
+        tollDisplay.textContent = Number.isInteger(currentToll) ? currentToll : currentToll.toFixed(1);
+        updatePathDisplay();
+    }
+
+    function updatePathDisplay() {
+        const points = path.map(p => `${p.x * cellSize},${p.y * cellSize}`).join(' ');
+        pathPolyline.setAttribute('points', points);
+        
+        // Highlight current node
+        const last = path[path.length - 1];
+        updateNodeHighlights(last.x, last.y);
+    }
+
+    function updateNodeHighlights(curX, curY) {
+        const nodes = nodesGroup.children;
+        for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            const nx = Math.round(node.getAttribute('cx') / cellSize);
+            const ny = Math.round(node.getAttribute('cy') / cellSize);
+            
+            if (nx === curX && ny === curY) {
+                node.setAttribute("fill", "var(--accent)");
+            } else if (nx === gridSize && ny === gridSize) {
+                node.setAttribute("fill", "var(--success)");
+            } else {
+                node.setAttribute("fill", "#fff");
+            }
+        }
+    }
+
+    function checkWin(x, y) {
+        if (x === gridSize && y === gridSize) {
+            if (currentToll === -4) {
+                isDragging = false;
+                setTimeout(() => {
+                    overlay.style.display = 'flex';
+                }, 300);
+            }
+        }
+    }
+
+    function resetGame() {
+        path = [{x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}];
+        currentToll = 4;
+        isDragging = false;
+        tollDisplay.textContent = "4";
+        updatePathDisplay();
+    }
+
+    init();
+</script>
+
+</body>
+</html>

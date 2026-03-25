@@ -406,7 +406,7 @@ const puzzles = [
   { name:"數學金字塔", cat:"數學計算", act:"112", room:"朋友房-翔禹", desc:"三角形數字填格謎題，發現上下層數字之間的運算規律，找出X的值。", answer:"06", link:"https://docs.google.com/document/d/1izpezo8nslY6Aqv6VrFuwTOLaUQiW-1kMXj2pHRpyO0/edit" },
   { name:"加加減減是怎樣喇", cat:"數學計算", act:"112", room:"朋友房-翔禹", desc:"18+14=432, 7+2=59…等看似錯誤的等式，找出隱藏的規律求Y的值。", answer:"04", link:"https://docs.google.com/document/d/1ExuNiabygd1mj9Cv_SGqhJhghxerbdWeN_G9MPBKDSc/edit" },
   { name:"ChatGPT（改）", cat:"文字語文", act:"112", room:"朋友房-翔禹", desc:"注音符號拆解後對應鍵盤上的英文字母，再重組成有意義的詞語。", answer:"在抽屜", link:"https://docs.google.com/document/d/1ZQM_EiPKqxrevvun1lDb_WQf1REzFGL9J6w3t8HTVHs/edit" },
-  { name:"我的涼麵25塊ㄟ", cat:"視覺空間", act:"112", room:"朋友房-翔禹", desc:"方格街道路徑謎題：向右+2元、向左-2元、向下×2、向上÷2，走過不能再走，求特定金額的路徑。", answer:"", link:"https://docs.google.com/document/d/1IqBIxM1dYrrGFoIvzIRJ9IQM80OmuvY27XMakyCmMgc/edit" },
+  { name:"我的涼麵25塊ㄟ", cat:"視覺空間", act:"112", room:"朋友房-翔禹", desc:"方格街道路徑謎題：向右+2元、向左-2元、向下×2、向上÷2，走過不能再走，求特定金額的路徑。", answer:"", link:"https://docs.google.com/document/d/1IqBIxM1dYrrGFoIvzIRJ9IQM80OmuvY27XMakyCmMgc/edit", playLink:"street-challenge.html" },
   { name:"QR圖片", cat:"視覺空間", act:"112", room:"朋友房-翔禹", desc:"4題以QR碼圖片呈現的謎題，掃描後取得各關線索。", answer:"", link:"https://docs.google.com/document/d/1sZjqENsxaWhl5695Ju5RKDh31luoqyD9IRrwKZGmMwQ/edit" },
 
   // ── 112年 家人房-宜庭 ────────────────────────────────────
@@ -534,6 +534,7 @@ function renderCards() {
 
     const roomTag   = p.room   ? `<span class="tag tag-room">${p.room}</span>`           : "";
     const answerTag = p.answer ? `<span class="tag tag-answer">答案：${p.answer}</span>` : "";
+    const playBtn   = p.playLink ? `<span class="tag tag-act-113" style="cursor:pointer; background:var(--accent); color:white; border:none;" onclick="event.stopPropagation(); window.open('${p.playLink}','_blank')">🕹️ 點我玩互動驗證</span>` : "";
 
     return `
       <div ${cardAttr}>
@@ -546,7 +547,7 @@ function renderCards() {
         <div class="card-tags">
           <span class="tag tag-cat">${cm.icon} ${p.cat}</span>
           <span class="tag ${am.css}">${am.label}</span>
-          ${roomTag}${answerTag}
+          ${roomTag}${answerTag}${playBtn}
         </div>
       </div>`;
   }).join("");
