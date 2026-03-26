@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>520之謎 - 火柴棒密碼</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Caveat:wght@700&display=swap');
+
+        :root {
+            --bg: #fce4ec;
+            --paper-bg: #fef6f8;
+            --note-bg: #fce4ec;
+            --note-border: #f48fb1;
+            --text: #3a1a25;
+            --text-dim: #9e4d6a;
+            --accent: #e91e63;
+            --accent-light: #f06292;
+            --success: #c2185b;
+            --grid-line: #f8bbd0;
+            --rect-stroke: #888;
+            --match-color: #3d2b1f;
+            --match-head: #e53935;
+            --label-color: #5c6bc0;
+            --shadow: rgba(233,30,99,0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans TC', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem 3rem;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 1.8rem;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.06em;
+            text-shadow: 0 2px 8px var(--shadow);
+        }
+        .header .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            margin-top: 0.4rem;
+        }
+
+        /* ── Story box ── */
+        .story-box {
+            max-width: 660px;
+            margin-bottom: 1.2rem;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* ── Pink note ── */
+        .note-card {
+            max-width: 660px;
+            width: 100%;
+            background: #fff0f5;
+            border: 2px solid var(--note-border);
+            border-radius: 18px;
+            padding: 1.2rem 1.6rem 1rem;
+            margin-bottom: 1.6rem;
+            box-shadow: 0 4px 18px var(--shadow);
+            position: relative;
+        }
+        .note-card::before {
+            content: "💌";
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.8rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+        .note-card p {
+            font-family: 'Caveat', cursive;
+            font-size: 1.35rem;
+            color: #c2185b;
+            line-height: 1.7;
+        }
+
+        /* ── Hint ── */
+        .hint-bar {
+            max-width: 660px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.88rem;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+            background: rgba(255,255,255,0.6);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: 1px dashed var(--note-border);
+        }
+        .hint-bar span { font-size: 1.1rem; }
+
+        /* ── Canvas container ── */
+        .canvas-wrap {
+            background: #fff0f5;
+            border: 2.5px solid var(--note-border);
+            border-radius: 22px;
+            padding: 22px;
+            box-shadow: 0 10px 36px var(--shadow);
+            touch-action: none;
+            user-select: none;
+        }
+
+        #puzzleCanvas {
+            display: block;
+            cursor: grab;
+        }
+        #puzzleCanvas:active { cursor: grabbing; }
+
+        /* ── Controls ── */
+        .controls {
+            margin-top: 1.6rem;
+            display: flex;
+            gap: 1rem;
+        }
+        button {
+            padding: 0.7rem 1.6rem;
+            border-radius: 14px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .btn-reset {
+            background: #fff;
+            border: 2px solid var(--note-border);
+            color: var(--text-dim);
+        }
+        .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ── Success Overlay ── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(100, 0, 40, 0.55);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .overlay.show { display: flex; }
+        .modal {
+            background: #fff0f5;
+            border: 3px solid var(--note-border);
+            padding: 2.5rem 2.8rem;
+            border-radius: 28px;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+            animation: popIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.7) translateY(30px); opacity: 0; }
+            to   { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .modal-emoji { font-size: 3.5rem; margin-bottom: 0.6rem; }
+        .modal h2 {
+            font-size: 1.9rem;
+            color: var(--success);
+            margin-bottom: 0.5rem;
+        }
+        .modal .secret {
+            font-family: 'Caveat', cursive;
+            font-size: 2.2rem;
+            color: var(--accent);
+            font-weight: 700;
+            margin: 0.8rem 0;
+            letter-spacing: 0.08em;
+        }
+        .modal p { color: var(--text-dim); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #ad1457);
+            color: white;
+            box-shadow: 0 4px 14px rgba(233,30,99,0.35);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(233,30,99,0.45);
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>💝 520 之 謎</h1>
+    <div class="subtitle">解開藏在巧克力裡的秘密</div>
+</div>
+
+<div class="story-box">
+    你看見桌上有塊被包裝起來的巧克力盒，你把它打開，裡頭掉出了一張粉色紙條。
+</div>
+
+<div class="note-card">
+    <p>移動 A、B、C、D，四根火柴棒，排出數字 520，<br>暗號就會浮現...</p>
+</div>
+
+<div class="hint-bar">
+    <span>💡</span>
+    拖曳火柴棒到正確的位置，火柴只能平移，不可轉向。
+</div>
+
+<div class="canvas-wrap">
+    <canvas id="puzzleCanvas" width="660" height="300"></canvas>
+</div>
+
+<div class="controls">
+    <button class="btn-reset" id="resetBtn">↺ 重新開始</button>
+</div>
+
+<div id="successOverlay" class="overlay">
+    <div class="modal">
+        <div class="modal-emoji">🌹</div>
+        <h2>暗號浮現了！</h2>
+        <div class="secret">Love You ♡</div>
+        <p>你成功排出了 520，解開了這甜蜜的秘密。</p>
+        <button class="btn-primary" id="replayBtn">再試一次</button>
+    </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  LAYOUT CONSTANTS  — Canvas 660×300, G=24
+// ════════════════════════════════════════════════
+const W = 660, H = 300;
+const G = 24; // grid unit
+
+// Snap threshold (px): how close anchor must be to count as placed
+const SNAP_DIST = 40; // Increased for easier testing
+
+// Three colored rects (the "520" background)
+// Adjusted to be exactly 6x9 cells (144x216 pixels) and grid-aligned
+const rects = [
+    { x: 96,  y: 48,  w: 144, h: 216, color: '#9575cd' }, // 5 — purple (Col 4, Row 2)
+    { x: 240, y: 48,  w: 144, h: 216, color: '#81a878' }, // 2 — sage green (Col 10, Row 2)
+    { x: 384, y: 48,  w: 144, h: 216, color: '#ef8c5a' }, // 0 — orange (Col 16, Row 2)
+];
+
+// Matchstick data (runtime state cloned from this)
+// pos: current left-end (H) or top-end (V) pixel position
+// type: 'h' or 'v'
+// len: pixel length
+const MATCHES_INIT = [
+    // A, B, C: start in bottom area (y >= 264)
+    { id:'A', type:'h', len: 96,  px: 96,  py: 288, color: '#3d2b1f' }, 
+    { id:'B', type:'h', len: 96,  px: 240, py: 288, color: '#3d2b1f' }, 
+    { id:'C', type:'h', len: 144, px: 384, py: 288, color: '#3d2b1f' }, 
+    // D: start in right blank zone
+    { id:'D', type:'v', len: 72,  px: 552, py: 144, color: '#3d2b1f' }, 
+];
+
+// Solution placement (anchor = left-end for H, top-end for V):
+// Updated to match the provided reference image layout
+const SOLUTIONS = {
+    C: { px: 168, py: 120 }, 
+    D: { px: 456, py: 120 },
+};
+const AB_TARGETS = [
+    { px: 96,  py: 192 }, 
+    { px: 288, py: 192 }, 
+];
+
+// ════════════════════════════════════════════════
+//  CANVAS & STATE
+// ════════════════════════════════════════════════
+const canvas = document.getElementById('puzzleCanvas');
+const ctx    = canvas.getContext('2d');
+
+let matches = [];         // runtime array
+let dragging = null;      // { idx, offX, offY }
+let solved = false;
+
+function initMatches() {
+    matches = MATCHES_INIT.map(m => ({ ...m }));
+    solved  = false;
+}
+
+// ════════════════════════════════════════════════
+//  DRAWING
+// ════════════════════════════════════════════════
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // ── background grid (pink lines) ──
+    ctx.save();
+    ctx.strokeStyle = '#f8bbd0';
+    ctx.lineWidth   = 1;
+    for (let x = 0; x <= W; x += G) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += G) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.restore();
+
+    // ── three coloured rects ──
+    rects.forEach(r => {
+        ctx.save();
+        ctx.fillStyle = r.color;
+        ctx.globalAlpha = 0.82;
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+        ctx.lineWidth   = 2;
+        ctx.strokeRect(r.x, r.y, r.w, r.h);
+        ctx.restore();
+    });
+
+    /* ── debug targets (guide for user) ──
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = 'rgba(255, 235, 59, 0.6)'; // Ghostly yellow
+    ctx.lineWidth = 2;
+
+    // C (Long H)
+    drawGhostMatch(168, 120, 144, 'h');
+    // D (Short V)
+    drawGhostMatch(456, 120, 72, 'v');
+    // A/B (Short H)
+    drawGhostMatch(96, 192, 96, 'h');
+    drawGhostMatch(288, 192, 96, 'h');
+
+    ctx.restore();
+    */
+
+    // ── matches ──
+    matches.forEach((m, i) => {
+        const isActive = dragging && dragging.idx === i;
+        drawMatch(m, isActive);
+    });
+}
+
+function drawMatch(m, active) {
+    const THICK  = 6;
+    const HEAD_R = 5;
+
+    let x1, y1, x2, y2;
+    if (m.type === 'h') {
+        x1 = m.px; y1 = m.py;
+        x2 = m.px + m.len; y2 = m.py;
+    } else {
+        x1 = m.px; y1 = m.py;
+        x2 = m.px; y2 = m.py + m.len;
+    }
+
+    ctx.save();
+
+    // glow when dragging
+    if (active) {
+        ctx.shadowColor = 'rgba(233,30,99,0.6)';
+        ctx.shadowBlur  = 14;
+    }
+
+    // stick body
+    ctx.strokeStyle = m.color;
+    ctx.lineWidth   = THICK;
+    ctx.lineCap     = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // match head (red circle at left/top end)
+    ctx.fillStyle = '#e53935';
+    ctx.shadowBlur = active ? 8 : 0;
+    ctx.beginPath();
+    ctx.arc(x1, y1, HEAD_R, 0, Math.PI * 2);
+    ctx.fill();
+
+    // label
+    ctx.shadowBlur  = 0;
+    ctx.fillStyle   = '#5c6bc0';
+    ctx.font        = `bold 13px 'Noto Sans TC', sans-serif`;
+    ctx.textBaseline = 'middle';
+    if (m.type === 'h') {
+        ctx.textAlign = 'center';
+        ctx.fillText(m.id, x1 - 12, y1);
+    } else {
+        ctx.textAlign = 'left';
+        ctx.fillText(m.id, x1 + 8, y1 - 10);
+    }
+
+    ctx.restore();
+}
+
+function drawGhostMatch(x, y, len, type, label) {
+    ctx.beginPath();
+    if (type === 'h') {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + len, y);
+    } else {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + len);
+    }
+    ctx.stroke();
+    
+    // Ghost head
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+    ctx.fill();
+}
+
+// ════════════════════════════════════════════════
+//  HIT TEST
+// ════════════════════════════════════════════════
+function hitMatch(mx, my) {
+    // Returns index of topmost match under pointer, or -1
+    for (let i = matches.length - 1; i >= 0; i--) {
+        const m = matches[i];
+        if (onMatch(mx, my, m)) return i;
+    }
+    return -1;
+}
+
+function onMatch(mx, my, m) {
+    const PAD = 10;
+    let x1, y1, x2, y2;
+    if (m.type === 'h') {
+        x1 = m.px - PAD; y1 = m.py - PAD;
+        x2 = m.px + m.len + PAD; y2 = m.py + PAD;
+    } else {
+        x1 = m.px - PAD; y1 = m.py - PAD;
+        x2 = m.px + PAD; y2 = m.py + m.len + PAD;
+    }
+    return mx >= x1 && mx <= x2 && my >= y1 && my <= y2;
+}
+
+// ════════════════════════════════════════════════
+//  SNAP
+// ════════════════════════════════════════════════
+function snapToGrid(m) {
+    // Snap anchor to nearest G multiple
+    m.px = Math.round(m.px / G) * G;
+    m.py = Math.round(m.py / G) * G;
+}
+
+function clampToBounds(m) {
+    if (m.type === 'h') {
+        m.px = Math.max(0, Math.min(W - m.len, m.px));
+        m.py = Math.max(0, Math.min(H, m.py));
+    } else {
+        m.px = Math.max(0, Math.min(W, m.px));
+        m.py = Math.max(0, Math.min(H - m.len, m.py));
+    }
+}
+
+// ════════════════════════════════════════════════
+//  WIN CHECK
+// ════════════════════════════════════════════════
+function checkSolved() {
+    const m = {};
+    matches.forEach(mt => { m[mt.id] = mt; });
+
+    // C must be near its target
+    if (!near(m.C, SOLUTIONS.C)) return false;
+    // D must be near its target
+    if (!near(m.D, SOLUTIONS.D)) return false;
+
+    // A and B: one goes to each AB_TARGET (either order)
+    const okAB1 = near(m.A, AB_TARGETS[0]) && near(m.B, AB_TARGETS[1]);
+    const okAB2 = near(m.A, AB_TARGETS[1]) && near(m.B, AB_TARGETS[0]);
+    return okAB1 || okAB2;
+}
+
+function near(match, target) {
+    const dx = Math.abs(match.px - target.px);
+    const dy = Math.abs(match.py - target.py);
+    return dx <= SNAP_DIST && dy <= SNAP_DIST;
+}
+
+// ════════════════════════════════════════════════
+//  EVENTS — Mouse
+// ════════════════════════════════════════════════
+function getCanvasXY(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top)  * scaleY,
+    };
+}
+
+canvas.addEventListener('mousedown', e => {
+    if (solved) return;
+    const { x, y } = getCanvasXY(e);
+    const idx = hitMatch(x, y);
+    if (idx < 0) return;
+    dragging = { idx, offX: x - matches[idx].px, offY: y - matches[idx].py };
+    // Bring to top
+    const m = matches.splice(idx, 1)[0];
+    matches.push(m);
+    dragging.idx = matches.length - 1;
+    draw();
+});
+
+canvas.addEventListener('mousemove', e => {
+    if (!dragging || solved) return;
+    const { x, y } = getCanvasXY(e);
+    const m = matches[dragging.idx];
+    m.px = x - dragging.offX;
+    m.py = y - dragging.offY;
+    draw();
+});
+
+canvas.addEventListener('mouseup', e => {
+    if (!dragging) return;
+    const m = matches[dragging.idx];
+    clampToBounds(m);
+    snapToGrid(m);
+    dragging = null;
+    draw();
+    if (!solved && checkSolved()) {
+        solved = true;
+        setTimeout(showSuccess, 500);
+    }
+});
+
+canvas.addEventListener('mouseleave', e => {
+    if (dragging) {
+        const m = matches[dragging.idx];
+        clampToBounds(m);
+        snapToGrid(m);
+        dragging = null;
+        draw();
+    }
+});
+
+// ════════════════════════════════════════════════
+//  EVENTS — Touch
+// ════════════════════════════════════════════════
+function getTouchXY(e) {
+    const t = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    return {
+        x: (t.clientX - rect.left) * scaleX,
+        y: (t.clientY - rect.top)  * scaleY,
+    };
+}
+
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (solved) return;
+    const { x, y } = getTouchXY(e);
+    const idx = hitMatch(x, y);
+    if (idx < 0) return;
+    dragging = { idx, offX: x - matches[idx].px, offY: y - matches[idx].py };
+    const m = matches.splice(idx, 1)[0];
+    matches.push(m);
+    dragging.idx = matches.length - 1;
+    draw();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!dragging || solved) return;
+    const { x, y } = getTouchXY(e);
+    const m = matches[dragging.idx];
+    m.px = x - dragging.offX;
+    m.py = y - dragging.offY;
+    draw();
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (!dragging) return;
+    const m = matches[dragging.idx];
+    clampToBounds(m);
+    snapToGrid(m);
+    dragging = null;
+    draw();
+    if (!solved && checkSolved()) {
+        solved = true;
+        setTimeout(showSuccess, 500);
+    }
+}, { passive: false });
+
+// ════════════════════════════════════════════════
+//  SUCCESS & RESET
+// ════════════════════════════════════════════════
+function showSuccess() {
+    document.getElementById('successOverlay').classList.add('show');
+}
+
+function resetPuzzle() {
+    document.getElementById('successOverlay').classList.remove('show');
+    initMatches();
+    draw();
+}
+
+document.getElementById('resetBtn').addEventListener('click', resetPuzzle);
+document.getElementById('replayBtn').addEventListener('click', resetPuzzle);
+
+// ════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════
+initMatches();
+draw();
+</script>
+</body>
+</html>
