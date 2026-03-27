@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖形密碼 - Nonogram 驗證程式</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+        :root {
+            --bg: #f8fafc;
+            --container-bg: #ffffff;
+            --text: #1e293b;
+            --accent: #3b82f6;
+            --accent-light: #93c5fd;
+            --grid-line: #e2e8f0;
+            --cell-filled: #1e293b;
+            --cell-crossed: #f87171;
+            --clue-text: #64748b;
+            --clue-match: #10b981;
+            --shadow: rgba(0, 0, 0, 0.05);
+            --cell-size: 35px;
+            --bold-border: 4px solid #1e293b; /* Thick border color */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        /* ── Rules Section ── */
+        .rules-card {
+            max-width: 660px;
+            width: 100%;
+            background: var(--container-bg);
+            padding: 1.8rem;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px var(--shadow);
+            margin-bottom: 2rem;
+            border-top: 6px solid var(--accent);
+        }
+
+        .rules-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .rules-list {
+            list-style: none;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .rules-list li {
+            margin-bottom: 1rem;
+            padding-left: 1.8rem;
+            position: relative;
+        }
+
+        .rules-list li::before {
+            content: attr(data-num);
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .controls-hint {
+            margin-top: 1.2rem;
+            padding: 1rem;
+            background: #f1f5f9;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            color: var(--clue-text);
+            border: 1px dashed var(--accent-light);
+        }
+
+        /* ── Unified Nonogram Grid ── */
+        .game-area {
+            background: var(--container-bg);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px var(--shadow);
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .nonogram-grid {
+            display: grid;
+            gap: 0;
+            margin: 0 auto;
+            border: 1px solid var(--text); /* Grid outline */
+            width: fit-content;
+        }
+
+        /* Grid Helper Classes */
+        .grid-box {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 0.5px solid var(--grid-line);
+            user-select: none;
+        }
+
+        /* Clue Box Styling */
+        .clue-box {
+            background: #fdfdfd;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--clue-text);
+            transition: all 0.3s ease;
+            border: 0.5px solid transparent; /* default hidden grid for clues */
+        }
+        
+        /* The inner grid for clues can have very light border if user wants boxes */
+        .clue-box.visible-grid {
+            border: 0.5px solid #f1f5f9;
+        }
+
+        .clue-box.matched {
+            background: #ecfdf5;
+            color: var(--clue-match);
+            font-weight: 700;
+        }
+
+        .clue-box.corner-area {
+            background: transparent;
+            border: none;
+        }
+
+        /* Gameplay Cell Styling */
+        .cell {
+            background: #fff;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.1s;
+        }
+
+        .cell:hover {
+            background: #f1f5f9;
+        }
+
+        .cell.filled {
+            background: var(--cell-filled);
+            border-color: var(--cell-filled);
+        }
+
+        .cell.crossed::after {
+            content: "×";
+            font-size: 1.8rem;
+            color: var(--cell-crossed);
+            font-weight: 400;
+        }
+
+        /* ── Bold Borders ── */
+        /* Border between clues and grid */
+        .boundary-top { border-top: var(--bold-border) !important; }
+        .boundary-left { border-left: var(--bold-border) !important; }
+
+        /* Thick lines every 5 cells (Gameplay inner grid) */
+        .cell.thick-top { border-top: 2px solid var(--text); }
+        .cell.thick-left { border-left: 2px solid var(--text); }
+
+        /* ── Action Buttons ── */
+        .actions {
+            margin-top: 2.5rem;
+            display: flex;
+            gap: 1.2rem;
+        }
+
+        .btn {
+            padding: 0.9rem 1.8rem;
+            border-radius: 14px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-reset {
+            background: #e2e8f0;
+            color: var(--text);
+        }
+
+        .btn-reset:hover {
+            background: #cbd5e1;
+            transform: translateY(-2px);
+        }
+
+        /* ── Success Overlay ── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            padding: 3rem;
+            border-radius: 32px;
+            text-align: center;
+            max-width: 440px;
+            width: 90%;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal h2 {
+            color: var(--clue-match);
+            margin-bottom: 1.2rem;
+            font-size: 2rem;
+        }
+
+        .secret-box {
+            margin: 1.5rem 0;
+            padding: 1.2rem;
+            background: #f0fdf4;
+            border: 2px solid var(--clue-match);
+            border-radius: 16px;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--clue-match);
+            letter-spacing: 2px;
+        }
+
+        .btn-success {
+            background: var(--accent);
+            color: white;
+            width: 100%;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            :root { --cell-size: 30px; }
+            .game-area { padding: 1rem; }
+            .modal { padding: 2rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>🧩 圖形密碼</h1>
+        <p>優化對齊與外框版本 - LAB 的秘密</p>
+    </div>
+
+    <!-- Rules Container -->
+    <div class="rules-card">
+        <h2>📖 規則說明</h2>
+        <ul class="rules-list">
+            <li data-num="1">依照標記圖列與直列提示數字，填寫色塊。</li>
+            <li data-num="2">填寫區與提示區之間已有粗線區隔。</li>
+            <li data-num="3">每 5 格會有一條輔助線，方便閱讀座標。</li>
+            <li data-num="4">標記叉叉（右鍵）能幫助您過濾不可能填色的格子。</li>
+            <li data-num="5">全部填寫正確時，謎底將會為您開啟。</li>
+        </ul>
+        <div class="controls-hint">
+            🖱️ <b>操作：</b>滑鼠<b>左鍵</b>填色自切換 | 滑鼠<b>右鍵</b>標記叉叉自切換
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="nonogram-grid" id="nonogram"></div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-reset" onclick="resetGame()">↺ 重置遊戲</button>
+    </div>
+
+    <!-- Success Overlay -->
+    <div id="successOverlay" class="overlay">
+        <div class="modal">
+            <div style="font-size: 4rem; margin-bottom: 1.2rem;">🏆</div>
+            <h2>謎題揭開！</h2>
+            <p>你已成功揭開了圖形中的秘密：</p>
+            <div class="secret-box" id="secretDisplay">LAB</div>
+            <p style="margin-top: 1rem; color: #64748b; font-size: 0.9rem;">做得好！</p>
+            <button class="btn btn-success" style="margin-top: 2rem;" onclick="closeModal()">繼續</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * PUZZLE CONFIGURATION
+         */
+        const SECRET_WORD = "LAB";
+
+        /*
+         IMAGE MATRIX (LAB Example 10x10)
+        */
+        const SOLUTION = [
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0], // R1: 1
+            [0, 0, 0, 1, 0, 1, 0, 0, 0, 0], // R2: 1 1
+            [1, 1, 0, 1, 0, 1, 0, 0, 0, 0], // R3: 2 1 1
+            [1, 1, 0, 1, 1, 1, 0, 0, 0, 0], // R4: 2 3
+            [1, 1, 0, 1, 0, 1, 1, 1, 1, 0], // R5: 2 1 4
+            [1, 1, 0, 0, 0, 0, 1, 0, 1, 0], // R6: 2 1 1
+            [1, 1, 1, 1, 0, 0, 1, 1, 1, 0], // R7: 4 3
+            [1, 1, 1, 1, 0, 0, 1, 1, 1, 1], // R8: 4 4
+            [0, 0, 0, 0, 0, 0, 1, 0, 0, 1], // R9: 1 1
+            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1], // R10: 4
+        ];
+
+        let userGrid = [];
+        let rows, cols, rowClues, colClues, maxRowClues, maxColClues;
+
+        function getClueSequence(arr) {
+            let seq = [];
+            let count = 0;
+            for (let v of arr) {
+                if (v === 1) count++;
+                else {
+                    if (count > 0) seq.push(count);
+                    count = 0;
+                }
+            }
+            if (count > 0) seq.push(count);
+            return seq.length === 0 ? [0] : seq;
+        }
+
+        function init() {
+            rows = SOLUTION.length;
+            cols = SOLUTION[0].length;
+            userGrid = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+            // Calculate Clues
+            rowClues = SOLUTION.map(row => getClueSequence(row));
+            colClues = [];
+            for (let c = 0; c < cols; c++) {
+                let colArr = [];
+                for (let r = 0; r < rows; r++) colArr.push(SOLUTION[r][c]);
+                colClues.push(getClueSequence(colArr));
+            }
+
+            maxRowClues = Math.max(...rowClues.map(c => c.length));
+            maxColClues = Math.max(...colClues.map(c => c.length));
+
+            render();
+            checkAllValidation();
+        }
+
+        /**
+         * NEW RENDER LOGIC:
+         * Builds cells ROW BY ROW to ensure grid indices never drift.
+         */
+        function render() {
+            const container = document.getElementById('nonogram');
+            container.innerHTML = '';
+
+            // Setup CSS Grid Layout
+            container.style.gridTemplateColumns = `repeat(${maxRowClues}, var(--cell-size)) repeat(${cols}, var(--cell-size))`;
+            
+            // --- HEADER ROWS (Column Clues) ---
+            for (let depth = 0; depth < maxColClues; depth++) {
+                // 1. Top-Left Corner (Empty boxes per grid row)
+                for (let i = 0; i < maxRowClues; i++) {
+                    const el = document.createElement('div');
+                    el.className = 'grid-box clue-box corner-area';
+                    container.appendChild(el);
+                }
+                // 2. Col Clues for this depth across all columns
+                for (let c = 0; c < cols; c++) {
+                    const el = document.createElement('div');
+                    el.className = 'grid-box clue-box col-clue visible-grid';
+                    el.dataset.col = c;
+                    
+                    const clueArray = colClues[c];
+                    // Back-calculate clue index to be bottom-aligned
+                    const clueIndex = clueArray.length - (maxColClues - depth);
+                    if (clueIndex >= 0) {
+                        el.textContent = clueArray[clueIndex];
+                    }
+                    
+                    if (c > 0 && c % 5 === 0) el.classList.add('thick-left');
+                    container.appendChild(el);
+                }
+            }
+
+            // --- GAMEPLAY ROWS (Row Clues + Grid) ---
+            for (let r = 0; r < rows; r++) {
+                // 3. Row Clues for row r
+                const clueArray = rowClues[r];
+                for (let cDepth = 0; cDepth < maxRowClues; cDepth++) {
+                    const el = document.createElement('div');
+                    el.className = 'grid-box clue-box row-clue visible-grid';
+                    el.dataset.row = r;
+                    
+                    // Logic: Clues are right-aligned.
+                    const clueIndex = clueArray.length - (maxRowClues - cDepth);
+                    if (clueIndex >= 0) {
+                        el.textContent = clueArray[clueIndex];
+                    }
+                    
+                    if (r > 0 && r % 5 === 0) el.classList.add('thick-top');
+                    // Add bold boundary on the right of the row clue area (before first gameplay cell)
+                    if (cDepth === maxRowClues - 1) {
+                        // This space can be handled on the 'cell' boundary-left instead
+                    }
+
+                    container.appendChild(el);
+                }
+
+                // 4. Main Grid Cells for row r
+                for (let c = 0; c < cols; c++) {
+                    const el = document.createElement('div');
+                    el.className = 'grid-box cell';
+                    el.dataset.row = r;
+                    el.dataset.col = c;
+
+                    // Thick separators (every 5)
+                    if (r > 0 && r % 5 === 0) el.classList.add('thick-top');
+                    if (c > 0 && c % 5 === 0) el.classList.add('thick-left');
+
+                    // --- BOLD BOUNDARY LINES ---
+                    if (r === 0) el.classList.add('boundary-top'); // Top of gameplay
+                    if (c === 0) el.classList.add('boundary-left'); // Left of gameplay
+
+                    // Interaction Handling
+                    el.onmousedown = (e) => {
+                        handleCellClick(r, c, e.button === 2);
+                        return false;
+                    };
+                    el.oncontextmenu = (e) => {
+                        e.preventDefault();
+                        return false;
+                    };
+
+                    container.appendChild(el);
+                }
+            }
+        }
+
+        function handleCellClick(r, c, isRight) {
+            const current = userGrid[r][c];
+            if (isRight) {
+                userGrid[r][c] = (current === 2) ? 0 : 2;
+            } else {
+                userGrid[r][c] = (current === 1) ? 0 : 1;
+            }
+            updateView(r, c);
+            validateLine(r, c);
+            checkWin();
+        }
+
+        function updateView(r, c) {
+            const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+            if (!el) return;
+            const val = userGrid[r][c];
+            el.classList.remove('filled', 'crossed');
+            if (val === 1) el.classList.add('filled');
+            else if (val === 2) el.classList.add('crossed');
+        }
+
+        function validateLine(targetR, targetC) {
+            // Row Highlight
+            const rowArr = userGrid[targetR].map(v => v === 1 ? 1 : 0);
+            const rowMatch = JSON.stringify(getClueSequence(rowArr)) === JSON.stringify(rowClues[targetR]);
+            document.querySelectorAll(`.row-clue[data-row="${targetR}"]`).forEach(el => {
+                if (rowMatch) el.classList.add('matched');
+                else el.classList.remove('matched');
+            });
+
+            // Column Highlight
+            const colArr = [];
+            for (let r = 0; r < rows; r++) colArr.push(userGrid[r][targetC] === 1 ? 1 : 0);
+            const colMatch = JSON.stringify(getClueSequence(colArr)) === JSON.stringify(colClues[targetC]);
+            document.querySelectorAll(`.col-clue[data-col="${targetC}"]`).forEach(el => {
+                if (colMatch) el.classList.add('matched');
+                else el.classList.remove('matched');
+            });
+        }
+
+        function checkAllValidation() {
+            for(let r=0; r<rows; r++) validateLine(r, 0);
+            for(let c=0; c<cols; c++) validateLine(0, c);
+        }
+
+        function checkWin() {
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const state = userGrid[r][c] === 1 ? 1 : 0;
+                    if (state !== SOLUTION[r][c]) return;
+                }
+            }
+            setTimeout(() => {
+                document.getElementById('successOverlay').classList.add('show');
+            }, 300);
+        }
+
+        function resetGame() {
+            init();
+        }
+
+        function closeModal() {
+            document.getElementById('successOverlay').classList.remove('show');
+        }
+
+        // Boot
+        init();
+    </script>
+</body>
+
+</html>
