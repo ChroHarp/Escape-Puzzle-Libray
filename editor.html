@@ -312,6 +312,29 @@
     }
     .toast.show { opacity: 1; transform: translateY(0); }
 
+    /* ── Cat checkboxes ── */
+    .cat-checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+      padding: .5rem .6rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+    }
+    .cat-check {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      font-size: .82rem;
+      cursor: pointer;
+      padding: .2rem .4rem;
+      border-radius: 5px;
+      transition: background .15s;
+    }
+    .cat-check:hover { background: var(--tag-bg); }
+    .cat-check input[type=checkbox] { accent-color: var(--accent); }
+
     /* ── Responsive ── */
     @media (max-width: 700px) {
       .header h1 { font-size: 1.35rem; }
@@ -355,7 +378,6 @@
       </div>
       <div class="toolbar-right">
         <span class="toolbar-info">顯示 <strong id="visibleCount">0</strong> / <strong id="totalCount">0</strong> 題</span>
-        <button class="btn btn-sm" id="toggleAnswerBtn" onclick="toggleGlobalAnswer()">👁️ 顯示答案</button>
       </div>
     </div>
 
@@ -392,16 +414,16 @@
         </div>
         <div class="form-row-3">
           <div class="form-group">
-            <label>類型 *</label>
-            <select id="f_cat">
-              <option value="文字語文">🔤 文字語文</option>
-              <option value="密碼解碼">🔢 密碼解碼</option>
-              <option value="邏輯推理">🧩 邏輯推理</option>
-              <option value="數學計算">➕ 數學計算</option>
-              <option value="視覺空間">👁️ 視覺空間</option>
-              <option value="聽覺感知">🎧 聽覺感知</option>
-              <option value="實體機關">⚙️ 實體機關</option>
-            </select>
+            <label>類型 *（可多選）</label>
+            <div class="cat-checkboxes" id="f_cat_group">
+              <label class="cat-check"><input type="checkbox" value="文字語文"> 🔤 文字語文</label>
+              <label class="cat-check"><input type="checkbox" value="密碼解碼"> 🔢 密碼解碼</label>
+              <label class="cat-check"><input type="checkbox" value="邏輯推理"> 🧩 邏輯推理</label>
+              <label class="cat-check"><input type="checkbox" value="數學計算"> ➕ 數學計算</label>
+              <label class="cat-check"><input type="checkbox" value="視覺空間"> 👁️ 視覺空間</label>
+              <label class="cat-check"><input type="checkbox" value="聽覺感知"> 🎧 聽覺感知</label>
+              <label class="cat-check"><input type="checkbox" value="實體機關"> ⚙️ 實體機關</label>
+            </div>
           </div>
           <div class="form-group">
             <label>活動 *</label>
@@ -561,7 +583,6 @@
 
     // ── State ──
     let puzzles = JSON.parse(localStorage.getItem("editorPuzzles") || "null") || [...defaultPuzzles];
-    let showAnswers = false;
     let editingIndex = -1;
     let searchTerm = "";
     let filterCat = "all";
@@ -592,12 +613,15 @@
       const tbody = document.getElementById("tableBody");
       let filtered = puzzles.map((p, i) => ({ ...p, _idx: i }));
 
-      if (filterCat !== "all") filtered = filtered.filter(p => p.cat === filterCat);
+      if (filterCat !== "all") filtered = filtered.filter(p => {
+        const cs = Array.isArray(p.cat) ? p.cat : [p.cat];
+        return cs.includes(filterCat);
+      });
       if (filterAct !== "all") filtered = filtered.filter(p => p.act === filterAct);
       if (searchTerm) {
         const s = searchTerm.toLowerCase();
         filtered = filtered.filter(p =>
-          (p.name + p.desc + p.answer + p.cat + p.room + p.act).toLowerCase().includes(s)
+          (p.name + p.desc + p.answer + (Array.isArray(p.cat) ? p.cat.join(' ') : p.cat) + p.room + p.act).toLowerCase().includes(s)
         );
       }
 
@@ -618,19 +642,14 @@
       }
 
       tbody.innerHTML = filtered.map((p, vi) => {
-        const cm = catMeta[p.cat] || { icon: "?", css: "" };
+        const pCats = Array.isArray(p.cat) ? p.cat : [p.cat];
         const am = actMeta[p.act] || { label: p.act };
         const idx = p._idx;
 
-        // answer cell
-        let answerHtml;
-        if (!p.answer) {
-          answerHtml = `<span class="answer-empty">—</span>`;
-        } else if (showAnswers) {
-          answerHtml = `<span class="answer-text">${escHtml(p.answer)}</span>`;
-        } else {
-          answerHtml = `<span class="answer-hidden" onclick="revealAnswer(this, '${escAttr(p.answer)}')">🔒 點擊顯示</span>`;
-        }
+        // answer cell — always visible in editor
+        const answerHtml = p.answer
+          ? `<span class="answer-text">${escHtml(p.answer)}</span>`
+          : `<span class="answer-empty">—</span>`;
 
         // link cell
         let linkHtml = "";
@@ -644,7 +663,7 @@
 
         return `<tr>
           <td class="cell-name">${vi + 1}. ${escHtml(p.name)}</td>
-          <td class="cell-cat"><span class="tag-mini" style="${cm.css}">${cm.icon} ${p.cat}</span></td>
+          <td class="cell-cat">${pCats.map(c => { const m = catMeta[c] || {icon:'?',css:''}; return `<span class="tag-mini" style="${m.css}">${m.icon} ${c}</span>`; }).join(' ')}</td>
           <td class="cell-act">${am.label}</td>
           <td class="cell-room">${escHtml(p.room) || '<span class="answer-empty">—</span>'}</td>
           <td class="cell-desc">${escHtml(p.desc)}</td>
@@ -662,18 +681,8 @@
     function escHtml(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
     function escAttr(s) { return (s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 
-    function revealAnswer(el, answer) {
-      el.outerHTML = `<span class="answer-text">${escHtml(answer)}</span>`;
-    }
 
-    function toggleGlobalAnswer() {
-      showAnswers = !showAnswers;
-      const btn = document.getElementById("toggleAnswerBtn");
-      btn.textContent = showAnswers ? "🙈 隱藏答案" : "👁️ 顯示答案";
-      render();
-    }
-
-    function sortBy(field) {
+function sortBy(field) {
       if (sortField === field) {
         sortAsc = !sortAsc;
       } else {
@@ -693,7 +702,8 @@
         title.textContent = "編輯謎題";
         const p = puzzles[editingIndex];
         document.getElementById("f_name").value = p.name;
-        document.getElementById("f_cat").value = p.cat;
+        const editCats = Array.isArray(p.cat) ? p.cat : [p.cat];
+        document.querySelectorAll("#f_cat_group input").forEach(cb => { cb.checked = editCats.includes(cb.value); });
         document.getElementById("f_act").value = p.act;
         document.getElementById("f_room").value = p.room || "";
         document.getElementById("f_desc").value = p.desc || "";
@@ -703,7 +713,7 @@
       } else {
         title.textContent = "新增謎題";
         document.getElementById("f_name").value = "";
-        document.getElementById("f_cat").value = "文字語文";
+        document.querySelectorAll("#f_cat_group input").forEach(cb => { cb.checked = false; });
         document.getElementById("f_act").value = "112";
         document.getElementById("f_room").value = "";
         document.getElementById("f_desc").value = "";
@@ -725,9 +735,12 @@
       const name = document.getElementById("f_name").value.trim();
       if (!name) { toast("請輸入謎題名稱"); return; }
 
+      const selectedCats = [...document.querySelectorAll("#f_cat_group input:checked")].map(cb => cb.value);
+      if (!selectedCats.length) { toast("請至少選擇一個類型"); return; }
+
       const data = {
         name,
-        cat: document.getElementById("f_cat").value,
+        cat: selectedCats.length === 1 ? selectedCats[0] : selectedCats,
         act: document.getElementById("f_act").value,
         room: document.getElementById("f_room").value.trim(),
         desc: document.getElementById("f_desc").value.trim(),

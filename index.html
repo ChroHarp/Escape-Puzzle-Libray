@@ -380,6 +380,16 @@
       color: var(--orange);
     }
 
+    .answer-spoiler {
+      cursor: pointer;
+      opacity: .75;
+      transition: opacity .15s;
+    }
+
+    .answer-spoiler:hover {
+      opacity: 1;
+    }
+
     .no-result {
       grid-column: 1 / -1;
       text-align: center;
@@ -635,11 +645,15 @@
       const container = document.getElementById("cardsContainer");
       const filtered = puzzles.filter(p => {
         if (filterFav && !likedPuzzles.includes(p.name)) return false;
-        if (filterCat !== "all" && p.cat !== filterCat) return false;
+        if (filterCat !== "all") {
+          const cats = Array.isArray(p.cat) ? p.cat : [p.cat];
+          if (!cats.includes(filterCat)) return false;
+        }
         if (filterAct !== "all" && p.act !== filterAct) return false;
         if (searchTerm) {
           const s = searchTerm.toLowerCase();
-          if (!(p.name + p.desc + p.answer + p.cat + p.room + p.act).toLowerCase().includes(s)) return false;
+          const catStr = Array.isArray(p.cat) ? p.cat.join(' ') : (p.cat || '');
+          if (!(p.name + p.desc + p.answer + catStr + p.room + p.act).toLowerCase().includes(s)) return false;
         }
         return true;
       });
@@ -657,7 +671,7 @@
   </svg>`;
 
       container.innerHTML = filtered.map(p => {
-        const cm = catMeta[p.cat] || { icon: "❓" };
+        const cats = Array.isArray(p.cat) ? p.cat : [p.cat];
         const am = actMeta[p.act] || { label: p.act, css: "tag-act-106" };
         const hasLink = !!p.link;
         const isLiked = likedPuzzles.includes(p.name);
@@ -674,7 +688,7 @@
           : `<span class="open-badge" style="visibility:hidden">.</span>`;
 
         const roomTag = p.room ? `<span class="tag tag-room">${p.room}</span>` : "";
-        const answerTag = p.answer ? `<span class="tag tag-answer">答案：${p.answer}</span>` : "";
+        const answerTag = p.answer ? `<span class="tag tag-answer answer-spoiler" data-answer="${p.answer.replace(/"/g,'&quot;')}" onclick="event.stopPropagation();this.textContent='答案：'+this.dataset.answer;this.classList.remove('answer-spoiler')" title="點擊顯示答案">🔒 答案</span>` : "";
         const playBtn = p.playLink ? `<span class="tag tag-act-113" style="cursor:pointer; background:var(--accent); color:white; border:none;" onclick="event.stopPropagation(); window.open('${p.playLink}','_blank')">🕹️ 點我玩互動驗證</span>` : "";
 
         return `
@@ -686,7 +700,7 @@
         </div>
         <div class="card-desc">${p.desc}</div>
         <div class="card-tags">
-          <span class="tag tag-cat">${cm.icon} ${p.cat}</span>
+          ${cats.map(c => { const m = catMeta[c] || {icon:'?'}; return `<span class="tag tag-cat">${m.icon} ${c}</span>`; }).join('')}
           <span class="tag ${am.css}">${am.label}</span>
           ${roomTag}${answerTag}${playBtn}
         </div>
