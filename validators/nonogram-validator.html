@@ -163,6 +163,8 @@
             cursor: pointer;
             position: relative;
             transition: background 0.1s;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .cell:hover {
@@ -266,11 +268,68 @@
             width: 100%;
         }
 
+        /* ── State Indicator ── */
+        .state-indicator {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .state-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #f1f5f9;
+            color: var(--clue-text);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .state-chip.active {
+            border-color: var(--accent);
+            background: #eff6ff;
+            color: var(--accent);
+        }
+
+        .state-chip .chip-preview {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1.5px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .state-chip.chip-fill .chip-preview { background: var(--cell-filled); border-color: var(--cell-filled); }
+        .state-chip.chip-cross .chip-preview { background: #fff; color: var(--cell-crossed); font-size: 1rem; font-weight: 700; }
+        .state-chip.chip-empty .chip-preview { background: #fff; }
+        .state-chip.chip-cycle .chip-preview { background: linear-gradient(135deg, var(--cell-filled) 50%, #fff 50%); border-color: #94a3b8; font-size: 0.65rem; }
+
         /* Responsive */
-        @media (max-width: 600px) {
-            :root { --cell-size: 30px; }
-            .game-area { padding: 1rem; }
+        @media (max-width: 700px) {
+            :root { --cell-size: 28px; }
+            .game-area { padding: 1rem 0.5rem; }
             .modal { padding: 2rem; }
+            .header h1 { font-size: 1.6rem; }
+            .rules-card { padding: 1.2rem; }
+        }
+
+        @media (max-width: 480px) {
+            :root { --cell-size: 22px; }
+            .game-area { padding: 0.5rem 0.2rem; }
+            .actions { flex-wrap: wrap; justify-content: center; }
+            .clue-box { font-size: 0.7rem; }
+            .cell.crossed::after { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -293,11 +352,25 @@
             <li data-num="5">全部填寫正確時，謎底將會為您開啟。</li>
         </ul>
         <div class="controls-hint">
-            🖱️ <b>操作：</b>滑鼠<b>左鍵</b>填色自切換 | 滑鼠<b>右鍵</b>標記叉叉自切換
+            👆 <b>操作：</b>點選格子循環切換狀態：<b>空白 → 填色 → ✕ → 空白</b>
         </div>
     </div>
 
     <div class="game-area">
+        <div class="state-indicator">
+            <div class="state-chip chip-cycle active" id="chip-cycle" onclick="setMode(3)">
+                <div class="chip-preview"></div> 循環
+            </div>
+            <div class="state-chip chip-fill" id="chip-fill" onclick="setMode(1)">
+                <div class="chip-preview"></div> 填色
+            </div>
+            <div class="state-chip chip-cross" id="chip-cross" onclick="setMode(2)">
+                <div class="chip-preview">✕</div> 叉叉
+            </div>
+            <div class="state-chip chip-empty" id="chip-empty" onclick="setMode(0)">
+                <div class="chip-preview"></div> 清空
+            </div>
+        </div>
         <div class="nonogram-grid" id="nonogram"></div>
     </div>
 
@@ -341,6 +414,16 @@
 
         let userGrid = [];
         let rows, cols, rowClues, colClues, maxRowClues, maxColClues;
+        let currentMode = 3; // 3=cycle, 1=fill, 2=cross, 0=clear
+
+        function setMode(mode) {
+            currentMode = mode;
+            ['fill', 'cross', 'empty', 'cycle'].forEach(name => {
+                document.getElementById('chip-' + name).classList.remove('active');
+            });
+            const map = { 1: 'fill', 2: 'cross', 0: 'empty', 3: 'cycle' };
+            document.getElementById('chip-' + map[mode]).classList.add('active');
+        }
 
         function getClueSequence(arr) {
             let seq = [];
@@ -454,31 +537,67 @@
                     if (c === 0) el.classList.add('boundary-left'); // Left of gameplay
 
                     // Interaction Handling
-                    el.onmousedown = (e) => {
-                        handleCellClick(r, c, e.button === 2);
-                        return false;
-                    };
-                    el.oncontextmenu = (e) => {
+                    el.addEventListener('pointerdown', (e) => {
                         e.preventDefault();
-                        return false;
-                    };
+                        startDrag(r, c, e);
+                    });
 
                     container.appendChild(el);
                 }
             }
         }
 
-        function handleCellClick(r, c, isRight) {
+        let isDragging = false;
+        let dragValue = 0;
+        let lastDragCell = null;
+
+        function calcDragValue(r, c) {
             const current = userGrid[r][c];
-            if (isRight) {
-                userGrid[r][c] = (current === 2) ? 0 : 2;
-            } else {
-                userGrid[r][c] = (current === 1) ? 0 : 1;
-            }
+            if (currentMode === 3) return (current + 1) % 3;
+            if (currentMode === 0) return 0;
+            if (currentMode === 1) return (current === 1) ? 0 : 1;
+            if (currentMode === 2) return (current === 2) ? 0 : 2;
+        }
+
+        function startDrag(r, c, e) {
+            isDragging = true;
+            lastDragCell = null;
+            dragValue = calcDragValue(r, c);
+            applyDrag(r, c);
+            // capture pointer so pointermove fires even outside element
+            e.currentTarget.setPointerCapture(e.pointerId);
+        }
+
+        function applyDrag(r, c) {
+            if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+            const key = `${r},${c}`;
+            if (key === lastDragCell) return;
+            lastDragCell = key;
+            userGrid[r][c] = dragValue;
             updateView(r, c);
             validateLine(r, c);
-            checkWin();
         }
+
+        document.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (!el || !el.classList.contains('cell')) return;
+            const r = parseInt(el.dataset.row);
+            const c = parseInt(el.dataset.col);
+            applyDrag(r, c);
+        });
+
+        document.addEventListener('pointerup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            lastDragCell = null;
+            checkWin();
+        });
+
+        document.addEventListener('pointercancel', () => {
+            isDragging = false;
+            lastDragCell = null;
+        });
 
         function updateView(r, c) {
             const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
