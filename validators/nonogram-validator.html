@@ -606,15 +606,15 @@
                     // Interaction Handling
                     el.onpointerdown = (e) => {
                         if (e.pointerType === 'touch') e.preventDefault();
-                        
+
                         // Right button or Ctrl+Click on desktop = always cross mode if not dragging yet
                         const isRightClick = e.button === 2 || e.ctrlKey;
                         startDrag(r, c, isRightClick);
-                        
+
                         // Desktop right-click behavior for single cells
                         return false;
                     };
-                    
+
                     el.onmouseenter = (e) => {
                         if (isDragging) {
                             applyDrag(r, c);
@@ -635,7 +635,7 @@
         function calcDragValue(r, c, isRightClick) {
             const current = userGrid[r][c];
             if (isRightClick) return (current === 2) ? 0 : 2;
-            
+
             if (currentMode === 3) return (current + 1) % 3; // Cycle: blank -> fill -> cross
             if (currentMode === 0) return 0;
             if (currentMode === 1) return (current === 1) ? 0 : 1;
