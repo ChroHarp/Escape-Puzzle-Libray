@@ -28,6 +28,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -39,6 +40,10 @@
             align-items: center;
             padding: 2rem 1rem;
             min-height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+            touch-action: manipulation;
         }
 
         .header {
@@ -118,6 +123,8 @@
             margin: 0 auto;
             border: 1px solid var(--text); /* Grid outline */
             width: fit-content;
+            touch-action: none;
+            -webkit-touch-callout: none;
         }
 
         /* Grid Helper Classes */
@@ -454,7 +461,8 @@
                     if (c === 0) el.classList.add('boundary-left'); // Left of gameplay
 
                     // Interaction Handling
-                    el.onmousedown = (e) => {
+                    el.onpointerdown = (e) => {
+                        if (e.pointerType === 'touch') e.preventDefault();
                         handleCellClick(r, c, e.button === 2);
                         return false;
                     };
