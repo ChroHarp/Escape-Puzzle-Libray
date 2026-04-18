@@ -1,367 +1,517 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的涼麵25塊ㄟ - 街道驗證程式</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #faf7f2;
-            --surface: #ffffff;
-            --border: #e8d5bc;
-            --text: #2d1a09;
-            --text-dim: #8a6645;
-            --accent: #b45309;
-            --accent-light: #d97706;
-            --success: #047857;
-            --danger: #9f1239;
-            --grid-line: #ddd;
+            --bg: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --surface-bright: rgba(51, 65, 85, 0.8);
+            --border: rgba(148, 163, 184, 0.2);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.5);
+            --success: #10b981;
+            --danger: #ef4444;
+            --grid-line: rgba(148, 163, 184, 0.1);
             --path-color: #f59e0b;
+            --path-glow: rgba(245, 158, 11, 0.4);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
-            background: var(--bg);
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
             color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 2rem 1rem;
+            padding: env(safe-area-inset-top) 1rem 2rem;
+            overflow-x: hidden;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             max-width: 600px;
+            padding-top: 1rem;
         }
+
         .header h1 {
-            font-size: 1.8rem;
-            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
         }
+
         .header p {
             color: var(--text-dim);
-            font-size: 1rem;
-            line-height: 1.5;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            font-weight: 300;
         }
 
         .game-info {
-            display: flex;
-            gap: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
             margin-bottom: 1.5rem;
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .info-card {
             background: var(--surface);
-            padding: 1rem 2rem;
-            border-radius: 16px;
-            border: 1.5px solid var(--border);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .info-item {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
             text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
         }
+
         .info-label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-dim);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.2rem;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
         }
+
         .info-value {
-            font-size: 1.4rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            color: var(--accent);
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
         }
+
         .info-value.target {
             color: var(--success);
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .info-value.current {
+            color: var(--path-color);
+            text-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .rules-container {
+            width: 100%;
+            max-width: 440px;
+            margin-bottom: 1.5rem;
         }
 
         .rules-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            font-size: 0.85rem;
-            background: rgba(180, 83, 9, 0.05);
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
             padding: 1rem;
-            border-radius: 12px;
-            border: 1px dashed var(--border);
+            border-radius: 16px;
+            border: 1px solid var(--border);
         }
+
         .rule {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
         }
+
         .rule-icon {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             background: var(--accent);
             color: white;
-            border-radius: 4px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
+            font-weight: 700;
+            box-shadow: 0 4px 12px var(--accent-glow);
+            flex-shrink: 0;
         }
 
         .canvas-container {
             position: relative;
             background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            touch-action: none; /* Prevent scrolling while dragging */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            touch-action: none;
+            width: 100%;
+            max-width: 440px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #gameGrid {
+            width: 100%;
+            height: 100%;
             display: block;
-            cursor: crosshair;
+            overflow: visible;
         }
 
         .controls {
             margin-top: 2rem;
             display: flex;
             gap: 1rem;
+            width: 100%;
+            max-width: 440px;
         }
+
         button {
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
+            flex: 1;
+            padding: 1rem;
+            border-radius: 16px;
             border: none;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-size: 1rem;
+            font-family: inherit;
         }
+
         .btn-reset {
-            background: var(--surface);
-            border: 1.5px solid var(--border);
-            color: var(--text-dim);
+            background: var(--surface-bright);
+            color: var(--text);
+            border: 1px solid var(--border);
         }
-        .btn-reset:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
-        .btn-primary:hover {
-            background: var(--accent-light);
-            transform: translateY(-2px);
+
+        .btn-reset:active {
+            transform: scale(0.95);
+            background: #475569;
         }
 
         .overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(4px);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
+            padding: 2rem;
         }
+
         .modal {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 24px;
+            background: #1e293b;
+            padding: 3rem 2rem;
+            border-radius: 32px;
             text-align: center;
             max-width: 400px;
-            width: 90%;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: modalIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        @keyframes popIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+
+        @keyframes modalIn {
+            from { transform: translateY(20px) scale(0.9); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
         }
+
         .modal h2 {
-            font-size: 2rem;
+            font-size: 2.2rem;
             margin-bottom: 1rem;
             color: var(--success);
+            font-weight: 700;
         }
+
         .modal p {
             color: var(--text-dim);
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
+            font-size: 1.1rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            color: white;
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+            width: 100%;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
         }
 
         .label-node {
-            font-size: 12px;
+            font-size: 11px;
             fill: var(--text-dim);
             pointer-events: none;
+            font-weight: 500;
+        }
+
+        /* SVG Elements */
+        .node-circle {
+            transition: r 0.2s ease, fill 0.2s ease, stroke 0.2s ease;
+        }
+        
+        .node-active {
+            filter: drop-shadow(0 0 8px var(--accent-glow));
+        }
+
+        #activePath {
+            filter: drop-shadow(0 0 12px var(--path-glow));
+        }
+
+        @media (max-width: 400px) {
+            .header h1 { font-size: 1.8rem; }
+            .canvas-container { padding: 16px; }
+            .info-value { font-size: 1.5rem; }
         }
     </style>
 </head>
+
 <body>
 
-<div class="header">
-    <h1>🍜 我的涼麵25塊ㄟ</h1>
-    <p>穿越街道前往學校，計算過路費。走過的街道不能重複，目標是在抵達終點時，繳納剛好 -4 元的過路費。</p>
-</div>
-
-<div class="game-info">
-    <div class="info-item">
-        <div class="info-label">目前過路費</div>
-        <div id="currentToll" class="info-value">4</div>
+    <div class="header">
+        <h1>🍜 我的涼麵25塊ㄟ</h1>
+        <p>穿越街道前往學校。走過的街道不重複，目標是抵達終點時，過路費剛好為 -4 元。</p>
     </div>
-    <div class="info-item">
-        <div class="info-label">目標金額</div>
-        <div class="info-value target">-4</div>
+
+    <div class="game-info">
+        <div class="info-card">
+            <div class="info-label">目前過路費</div>
+            <div id="currentToll" class="info-value current">4</div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">目標金額</div>
+            <div class="info-value target">-4</div>
+        </div>
     </div>
-</div>
 
-<div class="rules-grid">
-    <div class="rule"><div class="rule-icon">→</div> 向右走：+2 元</div>
-    <div class="rule"><div class="rule-icon">←</div> 向左走：-2 元</div>
-    <div class="rule"><div class="rule-icon">↓</div> 向下走：×2 倍</div>
-    <div class="rule"><div class="rule-icon">↑</div> 向上走：÷2 倍</div>
-</div>
-
-<div class="canvas-container">
-    <svg id="gameGrid" width="400" height="400" viewBox="-40 -40 480 480">
-        <!-- Definitions -->
-        <defs>
-            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="var(--path-color)" />
-            </marker>
-        </defs>
-
-        <!-- Grid Lines (Streets) -->
-        <g id="streets"></g>
-        
-        <!-- Path -->
-        <polyline id="activePath" fill="none" stroke="var(--path-color)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
-        
-        <!-- Nodes -->
-        <g id="nodes"></g>
-
-        <!-- Start/End Markers -->
-        <text x="0" y="-15" text-anchor="middle" class="label-node" style="font-weight:bold; fill:var(--accent)">社區大門 (起點)</text>
-        <text x="400" y="425" text-anchor="middle" class="label-node" style="font-weight:bold; fill:var(--success)">學校 (終點)</text>
-    </svg>
-</div>
-
-<div class="controls">
-    <button class="btn-reset" onclick="resetGame()">重新開始</button>
-</div>
-
-<div id="successOverlay" class="overlay">
-    <div class="modal">
-        <h2>🎉 退費成功！</h2>
-        <p>發票號碼 1150406</p>
-        <button class="btn-primary" onclick="resetGame(); document.getElementById('successOverlay').style.display='none'">再玩一次</button>
+    <div class="rules-container">
+        <div class="rules-grid">
+            <div class="rule">
+                <div class="rule-icon">→</div> 向右：+2
+            </div>
+            <div class="rule">
+                <div class="rule-icon">←</div> 向左：-2
+            </div>
+            <div class="rule">
+                <div class="rule-icon">↓</div> 向下：×2
+            </div>
+            <div class="rule">
+                <div class="rule-icon">↑</div> 向上：÷2
+            </div>
+        </div>
     </div>
-</div>
 
-<script>
-    const gridSize = 4; // 4x4 cells, 5x5 nodes
-    const cellSize = 100;
-    const nodesGroup = document.getElementById('nodes');
-    const streetsGroup = document.getElementById('streets');
-    const pathPolyline = document.getElementById('activePath');
-    const tollDisplay = document.getElementById('currentToll');
-    const overlay = document.getElementById('successOverlay');
+    <div class="canvas-container">
+        <svg id="gameGrid" viewBox="-50 -50 500 500">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
 
-    let path = [{x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}];
-    let currentToll = 4;
-    let isDragging = false;
+            <!-- Grid Lines -->
+            <g id="streets"></g>
 
-    // Initialize Grid
-    function init() {
-        // Draw Streets (Static thin lines)
-        for (let i = 0; i <= gridSize; i++) {
-            // Horizontal
-            const hLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            hLine.setAttribute("x1", 0);
-            hLine.setAttribute("y1", i * cellSize);
-            hLine.setAttribute("x2", gridSize * cellSize);
-            hLine.setAttribute("y2", i * cellSize);
-            hLine.setAttribute("stroke", "var(--grid-line)");
-            hLine.setAttribute("stroke-width", "2");
-            streetsGroup.appendChild(hLine);
+            <!-- Active Path -->
+            <polyline id="activePath" fill="none" stroke="var(--path-color)" stroke-width="10" stroke-linecap="round"
+                stroke-linejoin="round" />
 
-            // Vertical
-            const vLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            vLine.setAttribute("x1", i * cellSize);
-            vLine.setAttribute("y1", 0);
-            vLine.setAttribute("x2", i * cellSize);
-            vLine.setAttribute("y2", gridSize * cellSize);
-            vLine.setAttribute("stroke", "var(--grid-line)");
-            vLine.setAttribute("stroke-width", "2");
-            streetsGroup.appendChild(vLine);
+            <!-- Nodes Layer -->
+            <g id="nodes"></g>
+
+            <!-- Hit Areas (Invisible but large) -->
+            <g id="hitAreas"></g>
+
+            <!-- Start/End Markers -->
+            <text x="0" y="-20" text-anchor="middle" class="label-node">社區大門 (起點)</text>
+            <text x="400" y="430" text-anchor="middle" class="label-node">學校 (終點)</text>
+        </svg>
+    </div>
+
+    <div class="controls">
+        <button class="btn-reset" onclick="resetGame()">重新開始</button>
+    </div>
+
+    <div id="successOverlay" class="overlay">
+        <div class="modal">
+            <h2>🎉 退費成功！</h2>
+            <p>成功抵達學校！發票號碼：1150416</p>
+            <button class="btn-primary" onclick="closeSuccess()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        const gridSize = 4;
+        const cellSize = 100;
+        const svg = document.getElementById('gameGrid');
+        const nodesGroup = document.getElementById('nodes');
+        const streetsGroup = document.getElementById('streets');
+        const hitAreasGroup = document.getElementById('hitAreas');
+        const pathPolyline = document.getElementById('activePath');
+        const tollDisplay = document.getElementById('currentToll');
+        const overlay = document.getElementById('successOverlay');
+
+        let path = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }];
+        let currentToll = 4;
+        let isDragging = false;
+        let lastInteractionTime = 0;
+
+        function init() {
+            // Draw Streets
+            for (let i = 0; i <= gridSize; i++) {
+                // Horizontal
+                addLine(0, i * cellSize, gridSize * cellSize, i * cellSize);
+                // Vertical
+                addLine(i * cellSize, 0, i * cellSize, gridSize * cellSize);
+            }
+
+            // Draw Nodes and Hit Areas
+            for (let y = 0; y <= gridSize; y++) {
+                for (let x = 0; x <= gridSize; x++) {
+                    createNode(x, y);
+                }
+            }
+
+            // Pointer Events for the whole SVG to handle dragging reliably
+            svg.addEventListener('pointerdown', handlePointerDown);
+            window.addEventListener('pointermove', handlePointerMove);
+            window.addEventListener('pointerup', handlePointerUp);
+            window.addEventListener('pointercancel', handlePointerUp);
+
+            updatePathDisplay();
         }
 
-        // Draw Nodes
-        for (let y = 0; y <= gridSize; y++) {
-            for (let x = 0; x <= gridSize; x++) {
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", x * cellSize);
-                circle.setAttribute("cy", y * cellSize);
-                circle.setAttribute("r", 12);
-                circle.setAttribute("fill", "#fff");
-                circle.setAttribute("stroke", "var(--border)");
-                circle.setAttribute("stroke-width", "2");
-                circle.setAttribute("style", "cursor: pointer;");
-                
-                // Add events
-                circle.addEventListener('mousedown', (e) => startDrag(x, y));
-                circle.addEventListener('mouseenter', (e) => handleMouseEnter(x, y));
-                circle.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    startDrag(x, y);
-                });
-                
-                nodesGroup.appendChild(circle);
+        function addLine(x1, y1, x2, y2) {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1);
+            line.setAttribute("y1", y1);
+            line.setAttribute("x2", x2);
+            line.setAttribute("y2", y2);
+            line.setAttribute("stroke", "var(--grid-line)");
+            line.setAttribute("stroke-width", "3");
+            streetsGroup.appendChild(line);
+        }
 
-                // Start/End highlights
-                if (x === 0 && y === 0) circle.setAttribute("stroke", "var(--accent)");
-                if (x === gridSize && y === gridSize) circle.setAttribute("fill", "var(--success)");
-                if (x === 2 && y === 0) {
-                    circle.setAttribute("fill", "var(--accent)");
-                    circle.setAttribute("stroke", "var(--accent)");
+        function createNode(x, y) {
+            const cx = x * cellSize;
+            const cy = y * cellSize;
+
+            // Visual Circle
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", cx);
+            circle.setAttribute("cy", cy);
+            circle.setAttribute("r", 10);
+            circle.setAttribute("class", "node-circle");
+            circle.setAttribute("id", `node-${x}-${y}`);
+            circle.setAttribute("fill", "#1e293b");
+            circle.setAttribute("stroke", "var(--border)");
+            circle.setAttribute("stroke-width", "2");
+            nodesGroup.appendChild(circle);
+
+            // Larger Hit Area (Invisible)
+            const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            hit.setAttribute("cx", cx);
+            hit.setAttribute("cy", cy);
+            hit.setAttribute("r", 35); // Large hit area for thumbs
+            hit.setAttribute("fill", "transparent");
+            hit.style.cursor = "pointer";
+            hit.setAttribute("data-x", x);
+            hit.setAttribute("data-y", y);
+            hitAreasGroup.appendChild(hit);
+
+            // Initial highlights
+            if (x === 0 && y === 0) circle.setAttribute("stroke", "var(--accent)");
+            if (x === gridSize && y === gridSize) circle.setAttribute("fill", "var(--success)");
+            if (x === 2 && y === 0) {
+                circle.setAttribute("fill", "var(--path-color)");
+                circle.setAttribute("stroke", "var(--path-color)");
+            }
+        }
+
+        function handlePointerDown(e) {
+            const hit = e.target.closest('#hitAreas circle');
+            if (!hit) return;
+
+            const x = parseInt(hit.getAttribute('data-x'));
+            const y = parseInt(hit.getAttribute('data-y'));
+            const last = path[path.length - 1];
+
+            if (x === last.x && y === last.y) {
+                isDragging = true;
+                e.preventDefault();
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!isDragging) return;
+
+            // Find point in SVG space
+            const pt = svg.createSVGPoint();
+            pt.x = e.clientX;
+            pt.y = e.clientY;
+            const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+            // Check if we are near any node
+            const x = Math.round(svgP.x / cellSize);
+            const y = Math.round(svgP.y / cellSize);
+
+            if (x >= 0 && x <= gridSize && y >= 0 && y <= gridSize) {
+                const dx = svgP.x - x * cellSize;
+                const dy = svgP.y - y * cellSize;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 40) { // Threshold for snapping
+                    tryMoveTo(x, y);
                 }
             }
         }
-        
-        updatePathDisplay();
-    }
 
-    // Touch support for grid
-    document.getElementById('gameGrid').addEventListener('touchmove', (e) => {
-        const touch = e.touches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (element && element.tagName === 'circle') {
-            const x = Math.round(element.getAttribute('cx') / cellSize);
-            const y = Math.round(element.getAttribute('cy') / cellSize);
-            handleMouseEnter(x, y);
+        function handlePointerUp() {
+            isDragging = false;
         }
-    });
 
-    document.addEventListener('mouseup', () => isDragging = false);
-    document.addEventListener('touchend', () => isDragging = false);
+        function tryMoveTo(x, y) {
+            const last = path[path.length - 1];
+            if (x === last.x && y === last.y) return;
 
-    function startDrag(x, y) {
-        // Must start at current path head or start node if path is empty
-        const last = path[path.length - 1];
-        if (x === last.x && y === last.y) {
-            isDragging = true;
-        }
-    }
+            // Only adjacent moves
+            const dx = x - last.x;
+            const dy = y - last.y;
+            if (Math.abs(dx) + Math.abs(dy) !== 1) return;
 
-    function handleMouseEnter(x, y) {
-        if (!isDragging) return;
-
-        const last = path[path.length - 1];
-        
-        // Only allow adjacent moves (No diagonals)
-        const dx = x - last.x;
-        const dy = y - last.y;
-        
-        if (Math.abs(dx) + Math.abs(dy) !== 1) return;
-
-        // Check if edge is already used
-        if (isEdgeUsed(last.x, last.y, x, y)) {
-            // If dragging back to previous node, remove the last segment
+            // Check if dragging back to previous node
             if (path.length > 1) {
                 const secondLast = path[path.length - 2];
                 if (x === secondLast.x && y === secondLast.y) {
@@ -369,107 +519,139 @@
                     return;
                 }
             }
-            return;
-        }
 
-        // Add to path
-        path.push({x, y});
-        calculateToll(last, {x, y});
-        updatePathDisplay();
-        checkWin(x, y);
-    }
+            // Check if edge is already used
+            if (isEdgeUsed(last.x, last.y, x, y)) return;
 
-    function isEdgeUsed(x1, y1, x2, y2) {
-        for (let i = 0; i < path.length - 1; i++) {
-            const p1 = path[i];
-            const p2 = path[i+1];
-            if ((p1.x === x1 && p1.y === y1 && p2.x === x2 && p2.y === y2) ||
-                (p1.x === x2 && p1.y === y2 && p2.x === x1 && p2.y === y1)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function calculateToll(from, to) {
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-
-        if (dx === 1) currentToll += 2;      // Right
-        else if (dx === -1) currentToll -= 2; // Left
-        else if (dy === 1) currentToll *= 2;  // Down
-        else if (dy === -1) currentToll /= 2; // Up
-        
-        // Toll should be displayed clearly
-        tollDisplay.textContent = currentToll;
-    }
-
-    function undoLastMove() {
-        if (path.length <= 1) return;
-        
-        const to = path.pop();
-        const from = path[path.length - 1];
-        
-        // Reverse calculation
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-
-        if (dx === 1) currentToll -= 2;
-        else if (dx === -1) currentToll += 2;
-        else if (dy === 1) currentToll /= 2;
-        else if (dy === -1) currentToll *= 2;
-
-        tollDisplay.textContent = currentToll;
-        updatePathDisplay();
-    }
-
-    function updatePathDisplay() {
-        const points = path.map(p => `${p.x * cellSize},${p.y * cellSize}`).join(' ');
-        pathPolyline.setAttribute('points', points);
-        
-        // Highlight current node
-        const last = path[path.length - 1];
-        updateNodeHighlights(last.x, last.y);
-    }
-
-    function updateNodeHighlights(curX, curY) {
-        const nodes = nodesGroup.children;
-        for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-            const nx = Math.round(node.getAttribute('cx') / cellSize);
-            const ny = Math.round(node.getAttribute('cy') / cellSize);
+            // Add to path
+            path.push({ x, y });
+            calculateToll(last, { x, y });
+            updatePathDisplay();
             
-            if (nx === curX && ny === curY) {
-                node.setAttribute("fill", "var(--accent)");
-            } else if (nx === gridSize && ny === gridSize) {
-                node.setAttribute("fill", "var(--success)");
-            } else {
-                node.setAttribute("fill", "#fff");
+            // Haptic feedback if available
+            if (window.navigator.vibrate) window.navigator.vibrate(5);
+            
+            checkWin(x, y);
+        }
+
+        function isEdgeUsed(x1, y1, x2, y2) {
+            for (let i = 0; i < path.length - 1; i++) {
+                const p1 = path[i];
+                const p2 = path[i + 1];
+                if ((p1.x === x1 && p1.y === y1 && p2.x === x2 && p2.y === y2) ||
+                    (p1.x === x2 && p1.y === y2 && p2.x === x1 && p2.y === y1)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function calculateToll(from, to) {
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+
+            if (dx === 1) currentToll += 2;
+            else if (dx === -1) currentToll -= 2;
+            else if (dy === 1) currentToll *= 2;
+            else if (dy === -1) currentToll /= 2;
+
+            updateTollDisplay();
+        }
+
+        function undoLastMove() {
+            if (path.length <= 1) return;
+
+            const to = path.pop();
+            const from = path[path.length - 1];
+
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+
+            if (dx === 1) currentToll -= 2;
+            else if (dx === -1) currentToll += 2;
+            else if (dy === 1) currentToll /= 2;
+            else if (dy === -1) currentToll *= 2;
+
+            updateTollDisplay();
+            updatePathDisplay();
+            if (window.navigator.vibrate) window.navigator.vibrate(10);
+        }
+
+        function updateTollDisplay() {
+            tollDisplay.textContent = currentToll;
+            // Pulse effect
+            tollDisplay.parentElement.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                tollDisplay.parentElement.style.transform = 'scale(1)';
+            }, 100);
+        }
+
+        function updatePathDisplay() {
+            const points = path.map(p => `${p.x * cellSize},${p.y * cellSize}`).join(' ');
+            pathPolyline.setAttribute('points', points);
+
+            const last = path[path.length - 1];
+            updateNodeStyles(last.x, last.y);
+        }
+
+        function updateNodeStyles(curX, curY) {
+            for (let y = 0; y <= gridSize; y++) {
+                for (let x = 0; x <= gridSize; x++) {
+                    const node = document.getElementById(`node-${x}-${y}`);
+                    if (!node) continue;
+
+                    const isInPath = path.some(p => p.x === x && p.y === y);
+                    const isLast = (x === curX && y === curY);
+
+                    if (isLast) {
+                        node.setAttribute("fill", "var(--path-color)");
+                        node.setAttribute("stroke", "white");
+                        node.setAttribute("r", "14");
+                        node.classList.add("node-active");
+                    } else if (isInPath) {
+                        node.setAttribute("fill", "var(--path-color)");
+                        node.setAttribute("stroke", "var(--path-glow)");
+                        node.setAttribute("r", "10");
+                        node.classList.remove("node-active");
+                    } else if (x === gridSize && y === gridSize) {
+                        node.setAttribute("fill", "var(--success)");
+                        node.setAttribute("stroke", "rgba(16, 185, 129, 0.5)");
+                        node.setAttribute("r", "12");
+                    } else {
+                        node.setAttribute("fill", "#1e293b");
+                        node.setAttribute("stroke", "var(--border)");
+                        node.setAttribute("r", "8");
+                        node.classList.remove("node-active");
+                    }
+                }
             }
         }
-    }
 
-    function checkWin(x, y) {
-        if (x === gridSize && y === gridSize) {
-            if (currentToll === -4) {
+        function checkWin(x, y) {
+            if (x === gridSize && y === gridSize && currentToll === -4) {
                 isDragging = false;
                 setTimeout(() => {
                     overlay.style.display = 'flex';
-                }, 300);
+                }, 500);
             }
         }
-    }
 
-    function resetGame() {
-        path = [{x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}];
-        currentToll = 4;
-        isDragging = false;
-        tollDisplay.textContent = "4";
-        updatePathDisplay();
-    }
+        function resetGame() {
+            path = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }];
+            currentToll = 4;
+            isDragging = false;
+            updateTollDisplay();
+            updatePathDisplay();
+        }
 
-    init();
-</script>
+        function closeSuccess() {
+            overlay.style.display = 'none';
+            resetGame();
+        }
+
+        init();
+    </script>
 
 </body>
+
 </html>
