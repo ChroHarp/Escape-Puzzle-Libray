@@ -170,7 +170,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(10, 1fr);
+            grid-template-columns: repeat(7, 1fr);
             gap: clamp(3px, 0.8vw, 6px);
         }
 
@@ -426,7 +426,7 @@
             </div>
 
             <div class="grid-wrap">
-                <div class="grid" id="gameGrid" role="grid" aria-label="7 乘 10 感染方塊網格，中央有 3 乘 4 空洞"></div>
+                <div class="grid" id="gameGrid" role="grid" aria-label="10 乘 7 感染方塊網格，中央有 4 乘 3 空洞"></div>
             </div>
 
             <p class="message" id="message" aria-live="polite">請選擇至少 1 個初始感染源。</p>
@@ -452,11 +452,11 @@
     </main>
 
     <script>
-        const ROWS = 7;
-        const COLS = 10;
+        const ROWS = 10;
+        const COLS = 7;
         const MAX_SEEDS = 12;
-        const HOLE_ROWS = new Set([3, 4, 5]);
-        const HOLE_COLS = new Set([4, 5, 6, 7]);
+        const HOLE_ROWS = new Set([4, 5, 6, 7]);
+        const HOLE_COLS = new Set([1, 2, 3]);
         const TARGET_CELLS = ROWS * COLS - HOLE_ROWS.size * HOLE_COLS.size;
         const STEP_DELAY = 360;
 
