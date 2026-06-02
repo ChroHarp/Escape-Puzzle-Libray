@@ -196,10 +196,62 @@
             transform: translateY(-58%) scale(1.06);
         }
 
+        .piece.left-bounce {
+            animation: left-bounce 300ms ease-out;
+        }
+
+        .piece.right-collision {
+            animation: right-collision 620ms ease-out;
+        }
+
+        .board.right-collision {
+            animation: board-shake 520ms ease-out;
+        }
+
+        @keyframes left-bounce {
+            0%, 100% {
+                transform: translateY(-50%);
+            }
+            46% {
+                transform: translateY(-82%) scale(1.08);
+            }
+        }
+
+        @keyframes right-collision {
+            0% {
+                transform: translateY(-50%);
+            }
+            42% {
+                transform: translate(18%, -50%) scaleX(0.8) scaleY(1.12);
+            }
+            68% {
+                transform: translate(-10%, -50%) scaleX(1.08) scaleY(0.94);
+            }
+            100% {
+                transform: translateY(-50%);
+            }
+        }
+
+        @keyframes board-shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            30% {
+                transform: translateX(8px);
+            }
+            52% {
+                transform: translateX(-7px);
+            }
+            74% {
+                transform: translateX(4px);
+            }
+        }
+
         .cards {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: clamp(7px, 1.6vw, 12px);
+            touch-action: none;
         }
 
         .number-card {
@@ -212,7 +264,7 @@
             background: linear-gradient(145deg, #f8fbff, #cbd8ff);
             box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
             cursor: grab;
-            touch-action: manipulation;
+            touch-action: none;
             transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
         }
 
@@ -228,6 +280,13 @@
             border-color: var(--warning);
             box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.25), 0 10px 20px rgba(0, 0, 0, 0.23);
             transform: translateY(-4px);
+        }
+
+        .number-card.dragging {
+            z-index: 3;
+            border-color: var(--warning);
+            box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.25), 0 12px 22px rgba(0, 0, 0, 0.28);
+            transform: translateY(-7px) scale(1.04);
         }
 
         .card-order {
@@ -451,7 +510,11 @@
 
         let cards = [...INITIAL_CARDS];
         let selectedIndex = null;
-        let draggedIndex = null;
+        let pointerDragIndex = null;
+        let pointerStartX = 0;
+        let pointerStartY = 0;
+        let pointerHasMoved = false;
+        let suppressNextClick = false;
         let piecePosition = 0;
         let isMoving = false;
 
@@ -490,6 +553,10 @@
 
         function selectCard(index) {
             if (isMoving) return;
+            if (suppressNextClick) {
+                suppressNextClick = false;
+                return;
+            }
             if (selectedIndex === null) {
                 selectedIndex = index;
                 renderCards();
@@ -502,34 +569,96 @@
             renderCards();
         }
 
+        function moveCard(fromIndex, toIndex) {
+            if (fromIndex === toIndex) return;
+            const [movedCard] = cards.splice(fromIndex, 1);
+            cards.splice(toIndex, 0, movedCard);
+            pointerDragIndex = toIndex;
+            selectedIndex = null;
+            hideResults();
+            setMessage("拖曳排序中，放開後即可啟動測試。");
+            renderCards();
+        }
+
+        function startPointerDrag(event, index) {
+            if (isMoving || event.button > 0) return;
+            pointerDragIndex = index;
+            pointerStartX = event.clientX;
+            pointerStartY = event.clientY;
+            pointerHasMoved = false;
+            cardsContainer.setPointerCapture(event.pointerId);
+            renderCards();
+        }
+
+        function continuePointerDrag(event) {
+            if (pointerDragIndex === null) return;
+            const distance = Math.hypot(event.clientX - pointerStartX, event.clientY - pointerStartY);
+            if (distance < 7 && !pointerHasMoved) return;
+
+            pointerHasMoved = true;
+            event.preventDefault();
+            const cardElements = [...cardsContainer.querySelectorAll(".number-card")];
+            const targetIndex = cardElements.findIndex((card) => {
+                const rect = card.getBoundingClientRect();
+                return event.clientX < rect.left + rect.width / 2;
+            });
+            const insertionIndex = targetIndex === -1 ? cardElements.length - 1 : targetIndex;
+            moveCard(pointerDragIndex, insertionIndex);
+        }
+
+        function endPointerDrag(event) {
+            if (pointerDragIndex === null) return;
+            if (cardsContainer.hasPointerCapture(event.pointerId)) {
+                cardsContainer.releasePointerCapture(event.pointerId);
+            }
+            if (pointerHasMoved) {
+                suppressNextClick = true;
+                setMessage("排列已更新，可以按下啟動測試。");
+                window.setTimeout(() => {
+                    suppressNextClick = false;
+                }, 0);
+            }
+            pointerDragIndex = null;
+            pointerHasMoved = false;
+            renderCards();
+        }
+
         function renderCards() {
             cardsContainer.replaceChildren();
             cards.forEach((value, index) => {
                 const card = document.createElement("button");
-                card.className = `number-card${selectedIndex === index ? " selected" : ""}`;
+                card.className = `number-card${selectedIndex === index ? " selected" : ""}${pointerDragIndex === index ? " dragging" : ""}`;
                 card.type = "button";
                 card.disabled = isMoving;
-                card.draggable = !isMoving;
                 card.setAttribute("aria-label", `第 ${index + 1} 張卡片，數字 ${value}`);
                 card.innerHTML = `<span class="card-order">${index + 1}</span><span class="card-value">${value}</span>`;
                 card.addEventListener("click", () => selectCard(index));
-                card.addEventListener("dragstart", () => {
-                    draggedIndex = index;
-                });
-                card.addEventListener("dragover", (event) => {
-                    event.preventDefault();
-                });
-                card.addEventListener("drop", (event) => {
-                    event.preventDefault();
-                    if (draggedIndex !== null) swapCards(draggedIndex, index);
-                    draggedIndex = null;
-                    selectedIndex = null;
-                });
-                card.addEventListener("dragend", () => {
-                    draggedIndex = null;
-                });
+                card.addEventListener("pointerdown", (event) => startPointerDrag(event, index));
                 cardsContainer.appendChild(card);
             });
+        }
+
+        async function animateLeftOverflow(overflowSteps) {
+            for (let jump = 1; jump <= overflowSteps; jump += 1) {
+                setMessage(`超出左側邊緣 ${overflowSteps} 格：原地跳動 ${jump} / ${overflowSteps}。`);
+                piece.classList.remove("left-bounce");
+                void piece.offsetWidth;
+                piece.classList.add("left-bounce");
+                await wait(340);
+            }
+            piece.classList.remove("left-bounce");
+        }
+
+        async function animateRightCollision() {
+            piece.classList.remove("right-collision");
+            board.classList.remove("right-collision");
+            void piece.offsetWidth;
+            piece.classList.add("right-collision");
+            board.classList.add("right-collision");
+            setMessage("撞到右側邊緣！", "error");
+            await wait(680);
+            piece.classList.remove("right-collision");
+            board.classList.remove("right-collision");
         }
 
         function setControlsDisabled(disabled) {
@@ -553,11 +682,14 @@
             for (let index = 0; index < cards.length; index += 1) {
                 const steps = cards[index];
                 const movingRight = index % 2 === 0;
-                const nextPosition = movingRight
-                    ? piecePosition + steps
-                    : Math.max(0, piecePosition - steps);
+                const nextPosition = movingRight ? piecePosition + steps : piecePosition - steps;
 
                 if (nextPosition >= CELL_COUNT) {
+                    piecePosition = CELL_COUNT - 1;
+                    updatePiece(true);
+                    setMessage(`第 ${index + 1} 步：向右移動 ${steps} 格，碰到最右側邊緣。`);
+                    await wait(STEP_DELAY);
+                    await animateRightCollision();
                     setControlsDisabled(false);
                     failureText.textContent = `第 ${index + 1} 張卡片向右移動 ${steps} 格，超出最右方邊緣。`;
                     failureCard.hidden = false;
@@ -565,10 +697,14 @@
                     return;
                 }
 
-                piecePosition = nextPosition;
+                const leftOverflow = Math.max(0, -nextPosition);
+                piecePosition = Math.max(0, nextPosition);
                 updatePiece(true);
                 setMessage(`第 ${index + 1} 步：向${movingRight ? "右" : "左"}移動 ${steps} 格。`);
                 await wait(STEP_DELAY);
+                if (leftOverflow > 0) {
+                    await animateLeftOverflow(leftOverflow);
+                }
             }
 
             setControlsDisabled(false);
@@ -586,7 +722,7 @@
             if (isMoving) return;
             cards = [...INITIAL_CARDS];
             selectedIndex = null;
-            draggedIndex = null;
+            pointerDragIndex = null;
             piecePosition = 0;
             hideResults();
             updatePiece();
@@ -596,6 +732,9 @@
 
         startButton.addEventListener("click", startMovement);
         resetButton.addEventListener("click", resetGame);
+        cardsContainer.addEventListener("pointermove", continuePointerDrag);
+        cardsContainer.addEventListener("pointerup", endPointerDrag);
+        cardsContainer.addEventListener("pointercancel", endPointerDrag);
         window.addEventListener("resize", () => updatePiece());
 
         updatePiece();
