@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跳格子 - 驗證頁面</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+
+        :root {
+            --bg: #101126;
+            --surface: rgba(28, 30, 66, 0.9);
+            --surface-soft: rgba(48, 52, 104, 0.66);
+            --line: rgba(175, 183, 255, 0.24);
+            --text: #f5f7ff;
+            --text-dim: #b7bde7;
+            --accent: #84a7ff;
+            --accent-bright: #bed0ff;
+            --warning: #ffd166;
+            --success: #6ee7a6;
+            --danger: #ff8787;
+            --cell: #eef3ff;
+            --cell-line: #a9b8e4;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 28px 16px 36px;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 15% 8%, rgba(100, 125, 255, 0.22), transparent 30%),
+                radial-gradient(circle at 90% 86%, rgba(101, 78, 201, 0.22), transparent 34%),
+                var(--bg);
+            font-family: "Noto Sans TC", sans-serif;
+            touch-action: manipulation;
+        }
+
+        body::before {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            content: "";
+            opacity: 0.25;
+            background-image:
+                linear-gradient(rgba(175, 183, 255, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(175, 183, 255, 0.08) 1px, transparent 1px);
+            background-size: 34px 34px;
+        }
+
+        button {
+            font-family: inherit;
+        }
+
+        .page {
+            position: relative;
+            width: min(100%, 720px);
+            margin: 0 auto;
+        }
+
+        .hero {
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--accent);
+            font-size: 0.76rem;
+            font-weight: 900;
+            letter-spacing: 0.24em;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2.1rem, 8vw, 3.7rem);
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-shadow: 0 0 28px rgba(132, 167, 255, 0.35);
+        }
+
+        .intro {
+            margin: 10px auto 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            background: var(--surface);
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .rules {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+            padding: 14px;
+        }
+
+        .rule {
+            min-height: 86px;
+            padding: 11px;
+            border: 1px solid rgba(175, 183, 255, 0.15);
+            border-radius: 14px;
+            background: rgba(175, 183, 255, 0.05);
+            color: var(--text-dim);
+            font-size: 0.78rem;
+            line-height: 1.55;
+        }
+
+        .rule strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--accent-bright);
+            font-size: 0.82rem;
+        }
+
+        .game {
+            padding: clamp(15px, 4vw, 24px);
+        }
+
+        .section-title {
+            margin: 0 0 10px;
+            color: var(--text-dim);
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+        }
+
+        .board {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: clamp(6px, 1.4vw, 10px);
+            margin-bottom: 22px;
+        }
+
+        .board-cell {
+            position: relative;
+            aspect-ratio: 1;
+            border: 2px solid var(--cell-line);
+            border-radius: 13px;
+            background: var(--cell);
+            box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.46);
+        }
+
+        .board-cell:last-child {
+            border-color: var(--success);
+            box-shadow: inset 0 0 0 4px rgba(110, 231, 166, 0.18), 0 0 18px rgba(110, 231, 166, 0.22);
+        }
+
+        .board-cell:last-child::after {
+            position: absolute;
+            right: 7px;
+            bottom: 5px;
+            color: #208452;
+            content: "GOAL";
+            font-size: clamp(0.48rem, 1.6vw, 0.72rem);
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+
+        .piece {
+            position: absolute;
+            z-index: 2;
+            top: 50%;
+            left: 0;
+            width: 0;
+            aspect-ratio: 1;
+            border: 4px solid rgba(255, 255, 255, 0.72);
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ffc95b, #f28b37);
+            box-shadow: 0 5px 16px rgba(242, 139, 55, 0.46);
+            transform: translateY(-50%);
+            transition: left 520ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 180ms ease;
+        }
+
+        .piece::after {
+            position: absolute;
+            inset: 29%;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.68);
+            content: "";
+        }
+
+        .piece.moving {
+            transform: translateY(-58%) scale(1.06);
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: clamp(7px, 1.6vw, 12px);
+        }
+
+        .number-card {
+            position: relative;
+            min-width: 0;
+            aspect-ratio: 0.82;
+            border: 2px solid rgba(190, 208, 255, 0.5);
+            border-radius: 14px;
+            color: #172256;
+            background: linear-gradient(145deg, #f8fbff, #cbd8ff);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+            touch-action: manipulation;
+            transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .number-card:hover:not(:disabled) {
+            transform: translateY(-4px);
+        }
+
+        .number-card:active:not(:disabled) {
+            cursor: grabbing;
+        }
+
+        .number-card.selected {
+            border-color: var(--warning);
+            box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.25), 0 10px 20px rgba(0, 0, 0, 0.23);
+            transform: translateY(-4px);
+        }
+
+        .card-order {
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            color: rgba(23, 34, 86, 0.6);
+            font-size: clamp(0.58rem, 2vw, 0.76rem);
+            font-weight: 900;
+        }
+
+        .card-value {
+            display: grid;
+            height: 100%;
+            place-items: center;
+            font-size: clamp(2rem, 10vw, 4.4rem);
+            font-weight: 900;
+        }
+
+        .direction-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: clamp(7px, 1.6vw, 12px);
+            margin: 8px 0 0;
+            color: var(--accent-bright);
+            font-size: clamp(0.68rem, 2.7vw, 0.88rem);
+            font-weight: 900;
+            text-align: center;
+        }
+
+        .message {
+            min-height: 28px;
+            margin: 16px 0 10px;
+            color: var(--text-dim);
+            font-size: 0.88rem;
+            line-height: 1.55;
+            text-align: center;
+        }
+
+        .message.error {
+            color: var(--danger);
+        }
+
+        .message.success {
+            color: var(--success);
+        }
+
+        .result-card {
+            margin: 0 0 12px;
+            padding: 16px;
+            border: 1px solid rgba(110, 231, 166, 0.5);
+            border-radius: 14px;
+            background: rgba(23, 75, 59, 0.46);
+            text-align: center;
+        }
+
+        .result-card[hidden] {
+            display: none;
+        }
+
+        .result-card h2 {
+            margin: 0 0 6px;
+            color: var(--success);
+            font-size: 1.4rem;
+        }
+
+        .result-card p {
+            margin: 0;
+            color: var(--text-dim);
+            line-height: 1.65;
+        }
+
+        .result-card.failure {
+            border-color: rgba(255, 135, 135, 0.5);
+            background: rgba(101, 38, 54, 0.42);
+        }
+
+        .result-card.failure h2 {
+            color: var(--danger);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+        }
+
+        .action-button {
+            min-height: 50px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: 12px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            cursor: pointer;
+            transition: transform 160ms ease, opacity 160ms ease;
+        }
+
+        .action-button:not(:disabled):hover {
+            transform: translateY(-2px);
+        }
+
+        .action-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        .start-button {
+            color: #121833;
+            background: var(--accent);
+        }
+
+        .reset-button {
+            border: 1px solid var(--line);
+            color: var(--text-dim);
+            background: var(--surface-soft);
+        }
+
+        @media (max-width: 560px) {
+            body {
+                padding: 18px 10px 24px;
+            }
+
+            .rules {
+                grid-template-columns: 1fr;
+            }
+
+            .rule {
+                min-height: auto;
+            }
+
+            .game {
+                padding: 13px;
+            }
+
+            .action-button {
+                min-height: 56px;
+            }
+        }
+
+        @media (pointer: coarse) {
+            .number-card:hover:not(:disabled) {
+                transform: none;
+            }
+
+            .action-button {
+                min-height: 58px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <header class="hero">
+            <p class="eyebrow">NUMBER CARD ROUTE TEST</p>
+            <h1>跳格子</h1>
+            <p class="intro">排列數字卡，讓棋子依照順序移動後，恰巧停在最右方格子。</p>
+        </header>
+
+        <section class="rules panel" aria-label="遊戲規則">
+            <div class="rule"><strong>01 排列卡片</strong>點選兩張數字卡可交換位置，也可以直接拖曳交換。</div>
+            <div class="rule"><strong>02 交替移動</strong>棋子從最左格出發，依序向右、向左、向右、向左、向右移動。</div>
+            <div class="rule"><strong>03 邊界限制</strong>向左超出時停在第一格；向右超出最右格時，移動立即失敗。</div>
+        </section>
+
+        <section class="game panel">
+            <p class="section-title">移動棋盤</p>
+            <div class="board" id="board" aria-label="5 格移動棋盤">
+                <div class="board-cell"></div>
+                <div class="board-cell"></div>
+                <div class="board-cell"></div>
+                <div class="board-cell"></div>
+                <div class="board-cell"></div>
+                <div class="piece" id="piece" aria-label="棋子"></div>
+            </div>
+
+            <p class="section-title">數字卡排列</p>
+            <div class="cards" id="cards" aria-label="數字卡排列區"></div>
+            <div class="direction-row" aria-hidden="true">
+                <span>→ 右</span>
+                <span>← 左</span>
+                <span>→ 右</span>
+                <span>← 左</span>
+                <span>→ 右</span>
+            </div>
+
+            <p class="message" id="message" aria-live="polite">請先排列數字卡，再按下啟動。</p>
+
+            <section class="result-card" id="successCard" role="status" hidden>
+                <h2>挑戰成功</h2>
+                <p>棋子恰巧停在最右方格子。</p>
+            </section>
+
+            <section class="result-card failure" id="failureCard" role="status" hidden>
+                <h2>移動失敗</h2>
+                <p id="failureText">棋子沒有停在目標格，請重新排列數字卡。</p>
+            </section>
+
+            <div class="actions">
+                <button class="action-button start-button" id="startButton" type="button">啟動</button>
+                <button class="action-button reset-button" id="resetButton" type="button">重置</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const INITIAL_CARDS = [1, 2, 2, 3, 3];
+        const CELL_COUNT = 5;
+        const STEP_DELAY = 640;
+
+        const cardsContainer = document.getElementById("cards");
+        const board = document.getElementById("board");
+        const piece = document.getElementById("piece");
+        const message = document.getElementById("message");
+        const successCard = document.getElementById("successCard");
+        const failureCard = document.getElementById("failureCard");
+        const failureText = document.getElementById("failureText");
+        const startButton = document.getElementById("startButton");
+        const resetButton = document.getElementById("resetButton");
+
+        let cards = [...INITIAL_CARDS];
+        let selectedIndex = null;
+        let draggedIndex = null;
+        let piecePosition = 0;
+        let isMoving = false;
+
+        function wait(milliseconds) {
+            return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+        }
+
+        function setMessage(text, type = "") {
+            message.textContent = text;
+            message.className = `message ${type}`.trim();
+        }
+
+        function hideResults() {
+            successCard.hidden = true;
+            failureCard.hidden = true;
+        }
+
+        function updatePiece(animate = false) {
+            const targetCell = board.querySelectorAll(".board-cell")[piecePosition];
+            const pieceSize = targetCell.offsetWidth * 0.8;
+            piece.style.width = `${pieceSize}px`;
+            piece.style.left = `${targetCell.offsetLeft + (targetCell.offsetWidth - pieceSize) / 2}px`;
+            piece.classList.toggle("moving", animate);
+            if (animate) {
+                window.setTimeout(() => piece.classList.remove("moving"), 420);
+            }
+        }
+
+        function swapCards(firstIndex, secondIndex) {
+            if (firstIndex === secondIndex) return;
+            [cards[firstIndex], cards[secondIndex]] = [cards[secondIndex], cards[firstIndex]];
+            hideResults();
+            setMessage("排列已更新，可以按下啟動測試。");
+            renderCards();
+        }
+
+        function selectCard(index) {
+            if (isMoving) return;
+            if (selectedIndex === null) {
+                selectedIndex = index;
+                renderCards();
+                setMessage("請再選擇一張卡片交換位置。");
+                return;
+            }
+            const firstIndex = selectedIndex;
+            selectedIndex = null;
+            swapCards(firstIndex, index);
+            renderCards();
+        }
+
+        function renderCards() {
+            cardsContainer.replaceChildren();
+            cards.forEach((value, index) => {
+                const card = document.createElement("button");
+                card.className = `number-card${selectedIndex === index ? " selected" : ""}`;
+                card.type = "button";
+                card.disabled = isMoving;
+                card.draggable = !isMoving;
+                card.setAttribute("aria-label", `第 ${index + 1} 張卡片，數字 ${value}`);
+                card.innerHTML = `<span class="card-order">${index + 1}</span><span class="card-value">${value}</span>`;
+                card.addEventListener("click", () => selectCard(index));
+                card.addEventListener("dragstart", () => {
+                    draggedIndex = index;
+                });
+                card.addEventListener("dragover", (event) => {
+                    event.preventDefault();
+                });
+                card.addEventListener("drop", (event) => {
+                    event.preventDefault();
+                    if (draggedIndex !== null) swapCards(draggedIndex, index);
+                    draggedIndex = null;
+                    selectedIndex = null;
+                });
+                card.addEventListener("dragend", () => {
+                    draggedIndex = null;
+                });
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        function setControlsDisabled(disabled) {
+            isMoving = disabled;
+            startButton.disabled = disabled;
+            resetButton.disabled = disabled;
+            renderCards();
+        }
+
+        async function startMovement() {
+            if (isMoving) return;
+
+            selectedIndex = null;
+            hideResults();
+            piecePosition = 0;
+            updatePiece();
+            setControlsDisabled(true);
+            setMessage("棋子移動中...");
+            await wait(360);
+
+            for (let index = 0; index < cards.length; index += 1) {
+                const steps = cards[index];
+                const movingRight = index % 2 === 0;
+                const nextPosition = movingRight
+                    ? piecePosition + steps
+                    : Math.max(0, piecePosition - steps);
+
+                if (nextPosition >= CELL_COUNT) {
+                    setControlsDisabled(false);
+                    failureText.textContent = `第 ${index + 1} 張卡片向右移動 ${steps} 格，超出最右方邊緣。`;
+                    failureCard.hidden = false;
+                    setMessage("移動失敗：棋子不可超出最右方。", "error");
+                    return;
+                }
+
+                piecePosition = nextPosition;
+                updatePiece(true);
+                setMessage(`第 ${index + 1} 步：向${movingRight ? "右" : "左"}移動 ${steps} 格。`);
+                await wait(STEP_DELAY);
+            }
+
+            setControlsDisabled(false);
+            if (piecePosition === CELL_COUNT - 1) {
+                successCard.hidden = false;
+                setMessage("挑戰成功：棋子抵達最右方格子。", "success");
+            } else {
+                failureText.textContent = `棋子最後停在第 ${piecePosition + 1} 格，尚未抵達最右方。`;
+                failureCard.hidden = false;
+                setMessage("移動失敗：請重新排列數字卡。", "error");
+            }
+        }
+
+        function resetGame() {
+            if (isMoving) return;
+            cards = [...INITIAL_CARDS];
+            selectedIndex = null;
+            draggedIndex = null;
+            piecePosition = 0;
+            hideResults();
+            updatePiece();
+            renderCards();
+            setMessage("請先排列數字卡，再按下啟動。");
+        }
+
+        startButton.addEventListener("click", startMovement);
+        resetButton.addEventListener("click", resetGame);
+        window.addEventListener("resize", () => updatePiece());
+
+        updatePiece();
+        renderCards();
+    </script>
+</body>
+
+</html>
