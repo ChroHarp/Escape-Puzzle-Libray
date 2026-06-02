@@ -248,6 +248,7 @@
         }
 
         .cards {
+            position: relative;
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: clamp(7px, 1.6vw, 12px);
@@ -283,10 +284,11 @@
         }
 
         .number-card.dragging {
-            z-index: 3;
+            z-index: 6;
             border-color: var(--warning);
-            box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.25), 0 12px 22px rgba(0, 0, 0, 0.28);
-            transform: translateY(-7px) scale(1.04);
+            box-shadow: 0 0 0 5px rgba(255, 209, 102, 0.3), 0 24px 32px rgba(0, 0, 0, 0.38);
+            transform: translateY(var(--drag-lift, -48px)) scale(1.12) rotate(-2deg);
+            transition: transform 110ms ease-out, border-color 160ms ease, box-shadow 160ms ease;
         }
 
         .card-order {
@@ -513,6 +515,7 @@
         let pointerDragIndex = null;
         let pointerStartX = 0;
         let pointerStartY = 0;
+        let pointerCurrentY = 0;
         let pointerHasMoved = false;
         let suppressNextClick = false;
         let piecePosition = 0;
@@ -585,6 +588,7 @@
             pointerDragIndex = index;
             pointerStartX = event.clientX;
             pointerStartY = event.clientY;
+            pointerCurrentY = event.clientY;
             pointerHasMoved = false;
             cardsContainer.setPointerCapture(event.pointerId);
             renderCards();
@@ -596,6 +600,7 @@
             if (distance < 7 && !pointerHasMoved) return;
 
             pointerHasMoved = true;
+            pointerCurrentY = event.clientY;
             event.preventDefault();
             const cardElements = [...cardsContainer.querySelectorAll(".number-card")];
             const targetIndex = cardElements.findIndex((card) => {
@@ -631,6 +636,10 @@
                 card.type = "button";
                 card.disabled = isMoving;
                 card.setAttribute("aria-label", `第 ${index + 1} 張卡片，數字 ${value}`);
+                if (pointerDragIndex === index) {
+                    const dragLift = Math.min(-48, pointerCurrentY - pointerStartY - 48);
+                    card.style.setProperty("--drag-lift", `${dragLift}px`);
+                }
                 card.innerHTML = `<span class="card-order">${index + 1}</span><span class="card-value">${value}</span>`;
                 card.addEventListener("click", () => selectCard(index));
                 card.addEventListener("pointerdown", (event) => startPointerDrag(event, index));
@@ -732,9 +741,11 @@
 
         startButton.addEventListener("click", startMovement);
         resetButton.addEventListener("click", resetGame);
-        cardsContainer.addEventListener("pointermove", continuePointerDrag);
         cardsContainer.addEventListener("pointerup", endPointerDrag);
         cardsContainer.addEventListener("pointercancel", endPointerDrag);
+        window.addEventListener("pointermove", continuePointerDrag);
+        window.addEventListener("pointerup", endPointerDrag);
+        window.addEventListener("pointercancel", endPointerDrag);
         window.addEventListener("resize", () => updatePiece());
 
         updatePiece();
